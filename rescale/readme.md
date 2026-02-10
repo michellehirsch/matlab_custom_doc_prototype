@@ -1,13 +1,13 @@
 # rescale — Progressive Enhancement Sample
 
-A simple numeric utility (rescale data to a target range) shown at four documentation levels. This is the flagship example for the progressive enhancement story.
+A simple numeric utility (rescale data to a target range) shown at four documentation levels. This is the flagship basic example for the progressive enhancement story, with arguments block.
 
 ## Variants
 
 | File | Help? | `arguments` block? | Markdown / Sections? | What it demonstrates |
 |------|-------|---------------------|----------------------|----------------------|
 | `rescale_v0_bare.m` | None | Yes (no inline descriptions) | — | Zero effort baseline: what the renderer produces from just a function signature and `arguments` block |
-| `rescale_v1_plain.m` | Traditional | No | No | Classic MATLAB help style: synopsis, prose, plain-text examples. No `arguments` block. |
+| `rescale_v1_plain.m` | Traditional | Yes (no inline descriptions) | No | Classic MATLAB help style: synopsis, prose, plain-text examples. No `arguments` block. |
 | `rescale_v2_args.m` | Traditional | Yes, with inline `%` | No | Same help as v1, but the `arguments` block with inline descriptions auto-generates formatted argument tables |
 | `rescale_v3_full.m` | Rich | Yes, with inline `%` | `## Input/Output Arguments`, `## Examples`, `## Tips`, `## Algorithms`, `See also`, LaTeX math | Full expressiveness with every relevant grammar feature |
 

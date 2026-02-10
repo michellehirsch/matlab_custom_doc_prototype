@@ -72,11 +72,12 @@ end
 end
 
 function lines = joinContinuationLines(lines)
-% Join lines ending with ... (MATLAB continuation)
+% Join CODE lines ending with ... (MATLAB continuation).
+% Skip comment lines — ... in a comment is just an ellipsis, not continuation.
 k = 1;
 while k < numel(lines)
     stripped = strtrim(lines(k));
-    if endsWith(stripped, "...")
+    if ~startsWith(stripped, "%") && endsWith(stripped, "...")
         % Remove the ... and join with next line
         lines(k) = extractBefore(stripped, strlength(stripped) - 2) + " " + strtrim(lines(k+1));
         lines(k+1) = [];

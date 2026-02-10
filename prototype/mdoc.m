@@ -25,7 +25,7 @@ fid = fopen(outPath, 'w', 'n', 'UTF-8');
 fwrite(fid, char(html), 'char');
 fclose(fid);
 
-% Open in MATLAB browser
-web(char(outPath));
+% Open in system browser
+web(char(outPath), '-browser');
 
 end
