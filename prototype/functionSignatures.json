@@ -1,0 +1,13 @@
+{
+    "_schemaVersion": "1.0.0",
+    "mhelp": {
+        "inputs": [
+            {"name": "name", "kind": "required", "type": "identifier"}
+        ]
+    },
+    "mdoc": {
+        "inputs": [
+            {"name": "name", "kind": "required", "type": "identifier"}
+        ]
+    }
+}
