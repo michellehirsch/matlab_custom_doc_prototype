@@ -90,20 +90,71 @@ The function or class name, formatted as the page title.
 ### Synopsis
 From the first help comment line (see above).
 
-### Syntax Block
-Auto-generated from the function signature. For a function with multiple call forms, each is listed:
+### Syntax Block and Description
+
+The compact syntax block at the top of the page and the Description section below it are tightly coupled, mirroring the structure of MathWorks doc pages: each calling form in the syntax block has a corresponding description paragraph. The framework supports three modes for populating these, applied in priority order:
+
+**Priority 1 — `## Syntax` section (explicit full control).**
+When the author includes a `## Syntax` section in the help comment block, it is the sole source for the syntax block and syntax-description pairs. Auto-generation does not run. See `## Syntax` under **Optional Enhancement Sections** below for the grammar.
+
+**Priority 2 — Calling-form paragraphs in the description text.**
+If no `## Syntax` section exists, the renderer scans the freeform description (the help text before any `##` heading) for **calling-form paragraphs** — paragraphs whose first element is a backtick-wrapped expression containing the function name and `(`. These paragraphs serve double duty:
+
+- The calling form (the backtick-wrapped portion) is extracted into the compact syntax block
+- The full paragraph renders as a syntax-description pair in the Description section
+
+Any description paragraphs that are *not* calling-form paragraphs render as introductory prose before the syntax-description pairs. When the author writes calling-form paragraphs, auto-generation does not run — the author's forms are the complete set.
+
+**Example** — this is the traditional MATLAB help pattern, minimally enhanced with backtick wrapping:
 
 ```matlab
-function result = myFunc(x)
-function result = myFunc(x, opts)
+% weightedmean  Compute the weighted mean of an array.
+%
+% `m = weightedmean(x)` computes the arithmetic mean of the elements of
+% `x`, using uniform weights.
+%
+% `m = weightedmean(x, w)` uses the weights in `w`.  `w` must be the
+% same size as `x`.
+%
+% `m = weightedmean(x, w, dim)` operates along dimension `dim`.
+%
+% `___ = weightedmean(___, Name=Value)` specifies options using one or
+% more name-value arguments.
+%
+% `[m, ci] = weightedmean(___)` also returns a confidence interval.
 ```
 
-...renders as a Syntax section with both forms displayed as formatted code. For overloaded class methods, all public variants are listed.
+The renderer extracts five calling forms for the compact syntax block and renders five syntax-description pairs in the Description section.
 
-*Authors can override or supplement the auto-generated syntax by including a `## Syntax` section in the help comment block.*
+**Priority 3 — Auto-generation from `metafunction` (zero-effort fallback).**
+If neither a `## Syntax` section nor calling-form paragraphs exist, the renderer auto-generates the syntax block from function metadata. This is the zero-effort baseline: any function with an `arguments` block gets a useful syntax section with no authoring required.
 
-### Description
-The body of the help comment block — all content before the first `##` section heading — is rendered as the Description.
+Auto-generation uses `metafunction` (R2026a) to introspect `Signature.Inputs` and `Signature.Outputs`, then generates calling forms following these rules:
+
+1. **Required-only form** — only required positional inputs, first declared output:
+   `out = f(req1, req2)`
+2. **Progressive optionals** — one additional line per optional positional input (cumulative):
+   `out = f(req1, opt1)`, then `out = f(req1, opt1, opt2)`, etc.
+3. **Name-value indicator** — if any name-value arguments exist:
+   `___ = f(___, Name=Value)`
+4. **Multiple outputs** — if the function declares 2+ outputs:
+   `[out1, out2] = f(___)`
+
+**Example** — `weightedmean(x, w, dim, opts)` where `x` is required, `w` and `dim` are optional positional, and `opts` contains name-value arguments. The function declares two outputs `[m, ci]`. Auto-generation produces:
+
+```
+m = weightedmean(x)
+m = weightedmean(x, w)
+m = weightedmean(x, w, dim)
+___ = weightedmean(___, Name=Value)
+[m, ci] = weightedmean(___)`
+```
+
+Auto-generated forms have no descriptions — only the compact syntax block is rendered. To add descriptions, the author graduates to Priority 2 (calling-form paragraphs) or Priority 1 (`## Syntax`).
+
+**Legacy fallback** — if the function has no `arguments` block (`Signature.HasInputValidation` is false), or if `metafunction` is unavailable, the renderer strips the `function` keyword from the declaration line.
+
+**Calling-form detection heuristic:** A paragraph is recognized as a calling-form paragraph if its first inline element is a backtick-wrapped expression containing the function name followed by `(`. Plain-text calling forms (without backticks) are treated as regular prose for backward compatibility — existing unenhanced help text renders as an unstructured Description, the same as today.
 
 ### Input Arguments
 Auto-generated from the `arguments` block for inputs. Each entry includes:
@@ -190,8 +241,42 @@ The renderer merges inline and long-form descriptions: if a long-form entry exis
 
 Beyond auto-generated sections, authors can include the following recognized `##` section headings. The renderer applies distinct formatting to each.
 
-### `## Syntax` (override)
-Replaces or supplements the auto-generated syntax block.
+### `## Syntax` (explicit full control)
+
+When an author includes a `## Syntax` section, it becomes the **sole source** for the compact syntax block and syntax-description pairs. Auto-generation does not run. This gives the author complete control over which calling forms appear and in what order.
+
+The grammar inside `## Syntax` uses the same calling-form paragraph pattern as the description text: each paragraph starts with a backtick-wrapped calling form, followed by a description. Forms without descriptions are also supported via fenced code blocks.
+
+```matlab
+% ## Syntax
+%
+% `m = weightedmean(x)` computes the arithmetic mean of the elements of
+% `x`, using uniform weights.
+%
+% `m = weightedmean(x, w)` uses the weights in `w`.  `w` must be the
+% same size as `x`.
+%
+% `m = weightedmean(x, w, dim)` operates along dimension `dim`.
+%
+% `m = weightedmean(x, Method="harmonic")` computes the harmonic mean,
+% which is appropriate when averaging rates or ratios.
+%
+% `___ = weightedmean(___, Name=Value)` specifies options using one or
+% more name-value arguments.
+%
+% `[m, ci] = weightedmean(___)` also returns a confidence interval
+% based on the weighted standard deviation.
+```
+
+The renderer extracts calling forms for the compact syntax block and renders the descriptions as syntax-description pairs, matching the MathWorks Description section layout.
+
+When `## Syntax` is present, the freeform description text (before any `##` heading) renders as introductory prose only — calling-form paragraphs in it are not extracted.
+
+**When to use `## Syntax` vs. description calling forms:** Both produce the same rendered output. `## Syntax` is useful when the author wants a clean separation between syntax documentation and introductory prose, or when migrating from a legacy help block that mixes calling forms with argument descriptions in the freeform text. Description calling forms are the more natural choice when writing new help text from scratch, since they follow the traditional MATLAB help convention.
+
+**Rationale:** Most authors will use calling-form paragraphs in the description text (Priority 2), since it matches how MATLAB help has always been written. `## Syntax` exists as an explicit-control option for authors who prefer structured sections, or when the description text serves a different purpose (e.g., conceptual overview rather than per-syntax explanations).
+
+*Alternative considered: additive model (writing `## Syntax` supplements auto-generated forms). Rejected because it created confusion — the author couldn't see or control the full set of forms, and couldn't attach descriptions to auto-generated entries.*
 
 ### `## Input Arguments` / `## Output Arguments`
 Long-form argument descriptions (see above).
@@ -359,6 +444,7 @@ The generated site mirrors the structure and visual style of MATLAB's official p
 | Arg short desc | Trailing `% text` on argument line | `arguments` block |
 | Input arg long desc | `**argName** — ...` under `## Input Arguments` | Help comment |
 | Output arg desc | `**argName** — ...` under `## Output Arguments` | Help comment |
+| Syntax annotation | `` % `out = f(x, Name=val)` description `` under `## Syntax` | Help comment |
 | See also | `% See also a, b, c` | Help comment |
 | Examples | `% ## Examples` + fenced code blocks | Help comment |
 | Tips | `% ## Tips` | Help comment |
@@ -372,7 +458,7 @@ The generated site mirrors the structure and visual style of MATLAB's official p
 ## Open Questions
 
 1. **Callout syntax**: finalize the admonition syntax (`> [!NOTE]` vs. a custom prefix)
-2. **`## Syntax` override**: define the exact format for hand-authored syntax entries (function call signatures with argument names)
+2. ~~**`## Syntax` override**: define the exact format for hand-authored syntax entries~~ — **Resolved**: see `## Syntax` (annotate/extend) under Optional Enhancement Sections. The section supports fenced code blocks (forms only) and inline-code paragraphs (forms with descriptions).
 3. **Docbook configuration**: determine minimum configuration surface (site name? include/exclude patterns?)
 4. **`help` stripping behavior**: specify exactly which Markdown constructs are stripped vs. passed through in `help` output
 
