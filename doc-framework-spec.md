@@ -147,7 +147,7 @@ m = weightedmean(x)
 m = weightedmean(x, w)
 m = weightedmean(x, w, dim)
 ___ = weightedmean(___, Name=Value)
-[m, ci] = weightedmean(___)`
+[m, ci] = weightedmean(___)
 ```
 
 Auto-generated forms have no descriptions — only the compact syntax block is rendered. To add descriptions, the author graduates to Priority 2 (calling-form paragraphs) or Priority 1 (`## Syntax`).

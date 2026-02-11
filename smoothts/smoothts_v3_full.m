@@ -9,12 +9,15 @@ function y = smoothts(x, opts)
 %
 % ## Syntax
 %
-% ```matlab
-% y = smoothts(x)
-% y = smoothts(x, Method=method)
-% y = smoothts(x, Method=method, Window=w)
-% y = smoothts(x, Method="gaussian", Window=w, Sigma=s)
-% ```
+% `y = smoothts(x)` smooths the time series `x` using a moving average
+% with the default window size.
+%
+% `y = smoothts(x, Method=method)` specifies the smoothing method.
+%
+% `y = smoothts(x, Method=method, Window=w)` also sets the window size.
+%
+% `y = smoothts(x, Method="gaussian", Window=w, Sigma=s)` uses
+% Gaussian-weighted smoothing with explicit kernel width.
 %
 % ## Input Arguments
 %

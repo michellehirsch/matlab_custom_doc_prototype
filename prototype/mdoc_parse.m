@@ -46,6 +46,39 @@ info.NameValueArgs = mergeArgDescriptions(parsedNVArgs, inputArgLong);
 %% Build output arguments from long-form descriptions and function signature
 info.OutputArgs = buildOutputArgs(info.OutputArgNames, outputArgLong);
 
+%% Build syntax entries (three-priority model)
+% Priority 1: ## Syntax section is the sole source
+syntaxContent = "";
+for k = 1:numel(info.Sections)
+    if info.Sections(k).Heading == "Syntax"
+        syntaxContent = string(info.Sections(k).Content);
+        break
+    end
+end
+
+if syntaxContent ~= ""
+    info.SyntaxEntries = parseSyntaxSection(syntaxContent, info.Name);
+    info.SyntaxSource = "syntax_section";
+else
+    % Priority 2: Calling-form paragraphs in description
+    entries = extractCallingForms(info.Description, info.Name);
+    if ~isempty(entries)
+        info.SyntaxEntries = entries;
+        info.SyntaxSource = "description";
+    elseif ~isempty(parsedArgs) || ~isempty(parsedNVArgs)
+        % Priority 3: Auto-generate from parsed arguments
+        info.SyntaxEntries = generateAutoSyntax(info.Name, ...
+            info.OutputArgNames, parsedArgs, parsedNVArgs);
+        info.SyntaxSource = "auto";
+    else
+        % Legacy fallback: strip function keyword from declaration
+        display = regexprep(info.Signature{1}, '^function\s+', '');
+        info.SyntaxEntries = struct("Form", string(display), ...
+            "Description", "");
+        info.SyntaxSource = "legacy";
+    end
+end
+
 %% Store raw help lines for mhelp
 info.HelpLines = helpLines;
 
@@ -449,5 +482,191 @@ for k = 1:numel(outputArgNames)
         desc = string(longDescMap(char(name)));
     end
     outArgs(end+1) = struct("Name", name, "LongDesc", desc); %#ok<AGROW>
+end
+end
+
+%% ---- Syntax Extraction ----
+
+function entries = extractCallingForms(description, funcName)
+% Extract calling-form paragraphs from description text.
+% A calling-form paragraph starts with a backtick-wrapped expression
+% containing funcName followed by (.
+% Returns a struct array with fields Form (string) and Description (string).
+entries = struct("Form", {}, "Description", {});
+
+if description == ""
+    return
+end
+
+paragraphs = splitParagraphs(description);
+for k = 1:numel(paragraphs)
+    para = strtrim(paragraphs(k));
+    if para == "" || ~startsWith(para, "`")
+        continue
+    end
+
+    % Extract first backtick-wrapped expression
+    tok = regexp(para, '^`([^`]+)`', 'tokens');
+    if isempty(tok)
+        continue
+    end
+
+    form = string(tok{1}{1});
+
+    % Check if form contains funcName( (case-insensitive)
+    if ~contains(lower(form), lower(funcName) + "(")
+        continue
+    end
+
+    % Description is everything after the closing backtick
+    desc = strtrim(regexprep(para, '^`[^`]+`\s*', '', 'once'));
+
+    entries(end+1) = struct("Form", form, "Description", desc); %#ok<AGROW>
+end
+end
+
+function entries = parseSyntaxSection(content, funcName)
+% Parse a ## Syntax section for calling forms and descriptions.
+% Handles fenced code blocks (forms only) and calling-form paragraphs
+% (forms with descriptions). funcName is used only for validation of
+% calling-form paragraphs; fenced code block lines are accepted as-is.
+entries = struct("Form", {}, "Description", {});
+
+if content == ""
+    return
+end
+
+lines = splitlines(string(content));
+i = 1;
+while i <= numel(lines)
+    stripped = strtrim(lines(i));
+
+    % --- Fenced code block: each non-empty line is a form ---
+    if startsWith(stripped, "```")
+        i = i + 1;
+        while i <= numel(lines) && ~startsWith(strtrim(lines(i)), "```")
+            formLine = strtrim(lines(i));
+            if formLine ~= ""
+                entries(end+1) = struct("Form", formLine, ...
+                    "Description", ""); %#ok<AGROW>
+            end
+            i = i + 1;
+        end
+        if i <= numel(lines), i = i + 1; end % skip closing ```
+        continue
+    end
+
+    % --- Blank line ---
+    if stripped == ""
+        i = i + 1;
+        continue
+    end
+
+    % --- Calling-form paragraph ---
+    if startsWith(stripped, "`")
+        % Collect full paragraph (consecutive non-blank lines)
+        paraLines = string.empty;
+        while i <= numel(lines) && strtrim(lines(i)) ~= ""
+            paraLines(end+1) = lines(i); %#ok<AGROW>
+            i = i + 1;
+        end
+        para = strtrim(strjoin(paraLines, newline));
+
+        % Extract form from first backtick expression
+        tok = regexp(para, '^`([^`]+)`', 'tokens');
+        if ~isempty(tok)
+            form = string(tok{1}{1});
+            desc = strtrim(regexprep(para, '^`[^`]+`\s*', '', 'once'));
+            entries(end+1) = struct("Form", form, ...
+                "Description", desc); %#ok<AGROW>
+        end
+        continue
+    end
+
+    % --- Skip non-matching lines ---
+    i = i + 1;
+end
+end
+
+function entries = generateAutoSyntax(funcName, outputArgNames, posArgs, nvArgs)
+% Generate progressive calling forms from parsed argument metadata.
+% Uses text-parsed argument info. When metafunction (R2026a) is available,
+% this can be replaced with introspection-based generation.
+entries = struct("Form", {}, "Description", {});
+
+% Classify positional args as required (no default) or optional
+reqNames = string.empty;
+optNames = string.empty;
+for k = 1:numel(posArgs)
+    if posArgs(k).Default == ""
+        reqNames(end+1) = posArgs(k).Name; %#ok<AGROW>
+    else
+        optNames(end+1) = posArgs(k).Name; %#ok<AGROW>
+    end
+end
+
+% Build output prefix
+if isempty(outputArgNames)
+    outSingle = "";
+    outAll = "";
+elseif numel(outputArgNames) == 1
+    outSingle = outputArgNames(1) + " = ";
+    outAll = "";
+else
+    outSingle = outputArgNames(1) + " = ";
+    outAll = "[" + strjoin(outputArgNames, ", ") + "] = ";
+end
+
+% 1. Required-only form
+reqStr = strjoin(reqNames, ", ");
+entries(end+1) = struct("Form", ...
+    outSingle + funcName + "(" + reqStr + ")", "Description", "");
+
+% 2. Progressive optionals
+for k = 1:numel(optNames)
+    allArgs = [reqNames, optNames(1:k)];
+    argStr = strjoin(allArgs, ", ");
+    entries(end+1) = struct("Form", ...
+        outSingle + funcName + "(" + argStr + ")", ...
+        "Description", ""); %#ok<AGROW>
+end
+
+% 3. Name-value indicator
+if ~isempty(nvArgs)
+    if outSingle ~= ""
+        nvPrefix = "___ = ";
+    else
+        nvPrefix = "";
+    end
+    entries(end+1) = struct("Form", ...
+        nvPrefix + funcName + "(___, Name=Value)", ...
+        "Description", ""); %#ok<AGROW>
+end
+
+% 4. Multiple outputs
+if outAll ~= ""
+    entries(end+1) = struct("Form", ...
+        outAll + funcName + "(___)", ...
+        "Description", ""); %#ok<AGROW>
+end
+end
+
+function paragraphs = splitParagraphs(text)
+% Split text into paragraphs at blank lines.
+lines = splitlines(string(text));
+paragraphs = string.empty;
+current = string.empty;
+for k = 1:numel(lines)
+    if strtrim(lines(k)) == ""
+        if ~isempty(current)
+            paragraphs(end+1) = strjoin(current, newline); %#ok<AGROW>
+            current = string.empty;
+        end
+    else
+        current(end+1) = lines(k); %#ok<AGROW>
+    end
+end
+if ~isempty(current)
+    paragraphs(end+1) = strjoin(current, newline);
 end
 end

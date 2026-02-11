@@ -1,50 +1,30 @@
 function [m, ci] = weightedmean(x, w, dim, opts)
 % weightedmean  Compute the weighted mean of an array.
 %
-% `M = weightedmean(X)` computes the arithmetic mean of the elements of
-% `X`, using uniform weights.
-%
-% `M = weightedmean(X, W)` uses the weights in `W`.  `W` must be the
-% same size as `X`.
-%
-% `M = weightedmean(X, W, DIM)` operates along dimension `DIM` instead
-% of the default first non-singleton dimension.
-%
-% `[M, CI] = weightedmean(...)` also returns a confidence interval `CI`
-% based on the weighted standard deviation.
+% Computes the mean of the elements of an array, optionally weighted,
+% along a specified dimension.  Supports arithmetic, harmonic, and
+% geometric means.
 %
 % ## Syntax
 %
-% ```matlab
-% m = weightedmean(x)
-% m = weightedmean(x, w)
-% m = weightedmean(x, w, dim)
-% m = weightedmean(x, Method="harmonic")
-% [m, ci] = weightedmean(___)
-% ___ = weightedmean(___, Name=Value)
-% ```
+% `m = weightedmean(x)` computes the arithmetic mean of the elements of
+% `x`, using uniform weights.
 %
-% `X` is the input data.  It can be a vector, matrix, or N-D array of
-% type **double**.
+% `m = weightedmean(x, w)` uses the weights in `w`.  `w` must be the
+% same size as `x`.
 %
-% `W` specifies the weights and must be the same size as `X`.  If omitted
-% or empty, uniform weights are used.  By default, weights are normalized
-% to sum to 1 along the operating dimension.
+% `m = weightedmean(x, w, dim)` operates along dimension `dim` instead
+% of the default first non-singleton dimension.
 %
-% `DIM` is the dimension to operate along.  Must be a nonnegative integer.
-% `0` (default) uses the first non-singleton dimension.
+% `m = weightedmean(x, Method="harmonic")` computes the harmonic mean,
+% which is appropriate when averaging rates or ratios.
 %
-% `Method` controls the type of mean:  `"arithmetic"` (default),
-% `"harmonic"`, or `"geometric"`.
+% `___ = weightedmean(___, Name=Value)` specifies options using one or
+% more name-value arguments.  For example,
+% `weightedmean(x, Normalize=false)` skips weight normalization.
 %
-% `NanFlag` controls how NaN values are treated:  `"omitnan"` (default)
-% excludes them, `"includenan"` propagates them.
-%
-% `Normalize` is a **logical** flag controlling whether weights are
-% normalized to sum to 1.  Default is `true`.
-%
-% `Confidence` sets the confidence level for the interval returned in
-% `CI`.  Must be between `0` and `1`.  Default is `0.95`.
+% `[m, ci] = weightedmean(___)` also returns a confidence interval `ci`
+% based on the weighted standard deviation.
 %
 % ## Examples
 %

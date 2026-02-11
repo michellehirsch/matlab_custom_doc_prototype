@@ -25,9 +25,41 @@ end
 parts{end+1} = renderSyntax(info);
 
 % Description
-if info.Description ~= ""
-    parts{end+1} = '<h2>Description</h2>';
-    parts{end+1} = descriptionBlockMd(info.Description);
+syntaxSource = "";
+if isfield(info, 'SyntaxSource')
+    syntaxSource = info.SyntaxSource;
+end
+
+if syntaxSource == "syntax_section"
+    % Syntax descriptions come from ## Syntax entries; Description is
+    % intro prose only (rendered without <hr> syntax separators).
+    hasDescriptions = false;
+    if isfield(info, 'SyntaxEntries')
+        for sd = 1:numel(info.SyntaxEntries)
+            if info.SyntaxEntries(sd).Description ~= ""
+                hasDescriptions = true;
+                break
+            end
+        end
+    end
+    if hasDescriptions || info.Description ~= ""
+        parts{end+1} = '<h2>Description</h2>';
+        if hasDescriptions
+            parts{end+1} = renderSyntaxDescriptions(info.SyntaxEntries);
+        end
+        if info.Description ~= ""
+            parts{end+1} = blockMd(info.Description);
+        end
+    end
+else
+    % For "description", "auto", and "legacy" sources, render the
+    % description text as-is. descriptionBlockMd adds <hr> separators
+    % before backtick-starting paragraphs, preserving the traditional
+    % calling-form-paragraph layout.
+    if info.Description ~= ""
+        parts{end+1} = '<h2>Description</h2>';
+        parts{end+1} = descriptionBlockMd(info.Description);
+    end
 end
 
 % Examples (before Input Arguments, matching MathWorks order)
@@ -309,16 +341,52 @@ s = sprintf([...
 end
 
 function s = renderSyntax(info)
+% Render the compact syntax block from SyntaxEntries.
+if ~isfield(info, 'SyntaxEntries') || isempty(info.SyntaxEntries)
+    % Fallback for legacy info structs without SyntaxEntries
+    s = '<h2>Syntax</h2><div class="syntax-block"><pre>';
+    for k = 1:numel(info.Signature)
+        sig = info.Signature{k};
+        display = regexprep(sig, '^function\s+', '');
+        s = s + esc(string(display));
+        if k < numel(info.Signature)
+            s = s + newline;
+        end
+    end
+    s = s + "</pre></div>";
+    return
+end
+
 s = '<h2>Syntax</h2><div class="syntax-block"><pre>';
-for k = 1:numel(info.Signature)
-    sig = info.Signature{k};
-    display = regexprep(sig, '^function\s+', '');
-    s = s + esc(string(display));
-    if k < numel(info.Signature)
+for k = 1:numel(info.SyntaxEntries)
+    s = s + esc(info.SyntaxEntries(k).Form);
+    if k < numel(info.SyntaxEntries)
         s = s + newline;
     end
 end
 s = s + "</pre></div>";
+end
+
+function s = renderSyntaxDescriptions(entries)
+% Render syntax-description pairs from SyntaxEntries.
+% Reconstructs Markdown text and renders via descriptionBlockMd so that
+% <hr> separators and inline formatting are applied consistently.
+mdLines = string.empty;
+for k = 1:numel(entries)
+    e = entries(k);
+    if e.Description == ""
+        continue
+    end
+    % Reconstruct: `form` description (may be multi-line)
+    mdLines(end+1) = "`" + e.Form + "` " + e.Description; %#ok<AGROW>
+    mdLines(end+1) = ""; %#ok<AGROW> % blank line between entries
+end
+md = strtrim(strjoin(mdLines, newline));
+if md ~= ""
+    s = descriptionBlockMd(md);
+else
+    s = "";
+end
 end
 
 function s = renderArguments(args)
