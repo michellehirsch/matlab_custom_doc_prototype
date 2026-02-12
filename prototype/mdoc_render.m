@@ -15,8 +15,11 @@ parts = {};
 parts{end+1} = htmlHead(info.Name);
 parts{end+1} = '<body><div class="doc-page">';
 
-% Title and synopsis
+% Title and synopsis (with page-level expand/collapse all)
+parts{end+1} = '<div class="title-bar">';
 parts{end+1} = sprintf('<h1 class="func-name">%s</h1>', esc(info.Name));
+parts{end+1} = '<span class="collapse-toggle page-toggle" onclick="toggleAllPage()">collapse all</span>';
+parts{end+1} = '</div>';
 if info.Synopsis ~= ""
     parts{end+1} = sprintf('<p class="synopsis">%s</p>', inlineMd(info.Synopsis));
 end
@@ -24,11 +27,12 @@ end
 % Syntax
 parts{end+1} = renderSyntax(info);
 
-% Description
+% Description (with argument-name cross-links)
 syntaxSource = "";
 if isfield(info, 'SyntaxSource')
     syntaxSource = info.SyntaxSource;
 end
+argNames = collectArgNames(info);
 
 if syntaxSource == "syntax_section"
     % Syntax descriptions come from ## Syntax entries; Description is
@@ -46,10 +50,10 @@ if syntaxSource == "syntax_section"
         parts{end+1} = '<h2>Description</h2>';
         parts{end+1} = '<div class="description-body">';
         if hasDescriptions
-            parts{end+1} = renderSyntaxDescriptions(info.SyntaxEntries);
+            parts{end+1} = renderSyntaxDescriptions(info.SyntaxEntries, argNames);
         end
         if info.Description ~= ""
-            parts{end+1} = blockMd(info.Description);
+            parts{end+1} = linkifyArgNames(blockMd(info.Description), argNames);
         end
         parts{end+1} = '</div>';
     end
@@ -61,7 +65,7 @@ else
     if info.Description ~= ""
         parts{end+1} = '<h2>Description</h2>';
         parts{end+1} = '<div class="description-body">';
-        parts{end+1} = descriptionBlockMd(info.Description);
+        parts{end+1} = descriptionBlockMd(info.Description, argNames);
         parts{end+1} = '</div>';
     end
 end
@@ -260,21 +264,47 @@ end
 html = strjoin(string(out), newline);
 end
 
-function html = descriptionBlockMd(md)
+function html = descriptionBlockMd(md, argNames)
 % Render the Description section with <hr> separators before paragraphs
 % that start with inline code (syntax-description pairs).
+% Backtick-starting chunks get anchor IDs for syntax block links.
+% Argument names in syntax forms are linked to their definitions.
 chunks = splitDescriptionChunks(md);
 out = {};
+syntaxIdx = 0;
 for k = 1:numel(chunks)
     chunk = strtrim(chunks(k));
     if chunk == ""
         continue
     end
+    isSyntax = startsWith(chunk, "`");
     % Insert <hr> before syntax paragraphs (start with backtick), skip first
-    if k > 1 && startsWith(chunk, "`")
+    if k > 1 && isSyntax
         out{end+1} = '<hr class="desc-sep">'; %#ok<AGROW>
     end
-    out{end+1} = char(blockMd(chunk)); %#ok<AGROW>
+    if isSyntax
+        syntaxIdx = syntaxIdx + 1;
+        out{end+1} = sprintf('<div id="syntax-desc-%d" class="desc-entry">', syntaxIdx); %#ok<AGROW>
+
+        % Extract form from backticks and linkify; render rest as markdown
+        tok = regexp(chunk, '^`([^`]+)`([\s\S]*)', 'tokens', 'once');
+        if ~isempty(tok)
+            formHtml = linkifyForm(string(tok{1}), argNames);
+            descText = strtrim(string(tok{2}));
+            if descText ~= ""
+                descHtml = blockMd(descText);
+                out{end+1} = char(mergeFormIntoDesc(formHtml, descHtml)); %#ok<AGROW>
+            else
+                out{end+1} = char("<p>" + formHtml + "</p>"); %#ok<AGROW>
+            end
+        else
+            out{end+1} = char(blockMd(chunk)); %#ok<AGROW>
+        end
+
+        out{end+1} = '</div>'; %#ok<AGROW>
+    else
+        out{end+1} = char(blockMd(chunk)); %#ok<AGROW>
+    end
 end
 html = strjoin(string(out), newline);
 end
@@ -363,7 +393,12 @@ end
 
 s = '<h2>Syntax</h2><div class="syntax-block"><pre>';
 for k = 1:numel(info.SyntaxEntries)
-    s = s + esc(info.SyntaxEntries(k).Form);
+    form = esc(info.SyntaxEntries(k).Form);
+    if info.SyntaxEntries(k).Description ~= ""
+        s = s + string(sprintf('<a href="#syntax-desc-%d" class="syntax-link">%s</a>', k, form));
+    else
+        s = s + form;
+    end
     if k < numel(info.SyntaxEntries)
         s = s + newline;
     end
@@ -371,33 +406,40 @@ end
 s = s + "</pre></div>";
 end
 
-function s = renderSyntaxDescriptions(entries)
+function s = renderSyntaxDescriptions(entries, argNames)
 % Render syntax-description pairs from SyntaxEntries.
-% Reconstructs Markdown text and renders via descriptionBlockMd so that
-% <hr> separators and inline formatting are applied consistently.
-mdLines = string.empty;
+% Each entry gets an anchor id matching the syntax block links.
+% Argument names in the syntax form are linked to their definitions.
+out = {};
+hasContent = false;
 for k = 1:numel(entries)
     e = entries(k);
     if e.Description == ""
         continue
     end
-    % Reconstruct: `form` description (may be multi-line)
-    mdLines(end+1) = "`" + e.Form + "` " + e.Description; %#ok<AGROW>
-    mdLines(end+1) = ""; %#ok<AGROW> % blank line between entries
+    if hasContent
+        out{end+1} = '<hr class="desc-sep">'; %#ok<AGROW>
+    end
+    out{end+1} = sprintf('<div id="syntax-desc-%d" class="desc-entry">', k); %#ok<AGROW>
+
+    % Build linked syntax form directly, then render description via blockMd
+    formHtml = linkifyForm(e.Form, argNames);
+    descHtml = blockMd(e.Description);
+    % Merge form into the first <p> of the description
+    descHtml = mergeFormIntoDesc(formHtml, descHtml);
+    out{end+1} = char(linkifyArgNames(descHtml, argNames)); %#ok<AGROW>
+
+    out{end+1} = '</div>'; %#ok<AGROW>
+    hasContent = true;
 end
-md = strtrim(strjoin(mdLines, newline));
-if md ~= ""
-    s = descriptionBlockMd(md);
-else
-    s = "";
-end
+s = strjoin(string(out), newline);
 end
 
 function s = renderArguments(args)
 parts = {};
 for k = 1:numel(args)
     a = args(k);
-    parts{end+1} = '<div class="arg-entry collapsible">'; %#ok<AGROW>
+    parts{end+1} = sprintf('<div class="arg-entry collapsible" id="arg-%s">', char(a.Name)); %#ok<AGROW>
 
     % Heading line: <code>name</code> — short description
     heading = sprintf('<code>%s</code>', char(esc(a.Name)));
@@ -458,7 +500,7 @@ function s = renderOutputArguments(outArgs)
 parts = {};
 for k = 1:numel(outArgs)
     a = outArgs(k);
-    parts{end+1} = '<div class="arg-entry collapsible">'; %#ok<AGROW>
+    parts{end+1} = sprintf('<div class="arg-entry collapsible" id="arg-%s">', char(a.Name)); %#ok<AGROW>
 
     % Heading line: <code>name</code> — first line of description
     heading = sprintf('<code>%s</code>', char(esc(a.Name)));
@@ -605,6 +647,7 @@ s = [...
     'function toggleItem(el) {' newline ...
     '  el.classList.toggle("collapsed");' newline ...
     '  updateToggleText(el.closest(".section"));' newline ...
+    '  updatePageToggle();' newline ...
     '}' newline ...
     'function toggleAll(sectionId) {' newline ...
     '  var section = document.getElementById(sectionId);' newline ...
@@ -618,6 +661,22 @@ s = [...
     '    else item.classList.add("collapsed");' newline ...
     '  });' newline ...
     '  toggle.textContent = allCollapsed ? "collapse all" : "expand all";' newline ...
+    '  updatePageToggle();' newline ...
+    '}' newline ...
+    'function toggleAllPage() {' newline ...
+    '  var items = document.querySelectorAll(".collapsible");' newline ...
+    '  var toggle = document.querySelector(".page-toggle");' newline ...
+    '  var allCollapsed = Array.from(items).every(function(i) {' newline ...
+    '    return i.classList.contains("collapsed");' newline ...
+    '  });' newline ...
+    '  items.forEach(function(item) {' newline ...
+    '    if (allCollapsed) item.classList.remove("collapsed");' newline ...
+    '    else item.classList.add("collapsed");' newline ...
+    '  });' newline ...
+    '  document.querySelectorAll(".section").forEach(function(sec) {' newline ...
+    '    updateToggleText(sec);' newline ...
+    '  });' newline ...
+    '  toggle.textContent = allCollapsed ? "collapse all" : "expand all";' newline ...
     '}' newline ...
     'function updateToggleText(section) {' newline ...
     '  if (!section) return;' newline ...
@@ -629,6 +688,29 @@ s = [...
     '  });' newline ...
     '  toggle.textContent = allCollapsed ? "expand all" : "collapse all";' newline ...
     '}' newline ...
+    'function updatePageToggle() {' newline ...
+    '  var items = document.querySelectorAll(".collapsible");' newline ...
+    '  var toggle = document.querySelector(".page-toggle");' newline ...
+    '  if (!toggle) return;' newline ...
+    '  var allCollapsed = Array.from(items).every(function(i) {' newline ...
+    '    return i.classList.contains("collapsed");' newline ...
+    '  });' newline ...
+    '  toggle.textContent = allCollapsed ? "expand all" : "collapse all";' newline ...
+    '}' newline ...
+    '/* Auto-expand collapsed argument when navigating via anchor link */' newline ...
+    'document.addEventListener("click", function(e) {' newline ...
+    '  var link = e.target.closest("a.arg-ref, a.syntax-link");' newline ...
+    '  if (!link) return;' newline ...
+    '  var hash = link.getAttribute("href");' newline ...
+    '  if (!hash || hash[0] !== "#") return;' newline ...
+    '  var target = document.querySelector(hash);' newline ...
+    '  if (!target) return;' newline ...
+    '  if (target.classList.contains("collapsed")) {' newline ...
+    '    target.classList.remove("collapsed");' newline ...
+    '    updateToggleText(target.closest(".section"));' newline ...
+    '    updatePageToggle();' newline ...
+    '  }' newline ...
+    '});' newline ...
     '</script>'];
 end
 
@@ -636,6 +718,7 @@ end
 
 function css = cssStyles()
 css = [...
+    'html { scroll-behavior: smooth; }' newline ...
     ':root {' newline ...
     '  --mw-link-color: #0076a8;' newline ...
     '  --heading-color: #1a1a1a;' newline ...
@@ -718,7 +801,80 @@ css = [...
     '.arg-values code { background: none; padding: 0; font-size: 0.95em; }' newline ...
     '.arg-default { margin-top: 4px; font-size: 0.92em; color: #555; }' newline ...
     '.arg-default code { background: none; padding: 0; font-size: 0.95em; }' newline ...
+    '.title-bar { display: flex; justify-content: space-between; align-items: baseline; }' newline ...
+    '.title-bar .page-toggle { margin-top: 8px; }' newline ...
+    '.syntax-link { color: var(--mw-link-color); }' newline ...
+    '.arg-ref { color: var(--mw-link-color); }' newline ...
+    '.arg-ref code { color: inherit; background: none; padding: 0; }' newline ...
+    '.desc-entry { scroll-margin-top: 16px; }' newline ...
+    '.arg-entry { scroll-margin-top: 16px; }' newline ...
     ];
+end
+
+%% ==== Cross-Reference Helpers ====
+
+function argNames = collectArgNames(info)
+% Collect all known argument names (inputs, name-values, outputs).
+argNames = string.empty;
+for k = 1:numel(info.InputArgs)
+    argNames(end+1) = info.InputArgs(k).Name; %#ok<AGROW>
+end
+for k = 1:numel(info.NameValueArgs)
+    argNames(end+1) = info.NameValueArgs(k).Name; %#ok<AGROW>
+end
+for k = 1:numel(info.OutputArgs)
+    argNames(end+1) = info.OutputArgs(k).Name; %#ok<AGROW>
+end
+end
+
+function html = linkifyForm(formText, argNames)
+% Build <code> HTML for a syntax form with argument names linked
+% to their definitions. Operates on raw text before HTML conversion,
+% so no complex HTML parsing is needed.
+html = esc(formText);
+if isempty(argNames)
+    html = "<code>" + html + "</code>";
+    return
+end
+% Sort by length descending so longer names match first
+[~, order] = sort(strlength(argNames), 'descend');
+sorted = argNames(order);
+for k = 1:numel(sorted)
+    name = sorted(k);
+    eName = regexptranslate('escape', char(name));
+    html = regexprep(html, ['\b' eName '\b'], ...
+        char('<a href="#arg-' + name + '" class="arg-ref">' + name + '</a>'));
+end
+html = "<code>" + html + "</code>";
+end
+
+function html = mergeFormIntoDesc(formHtml, descHtml)
+% Merge a linked syntax-form <code> element into the first <p> of
+% rendered description HTML, so they appear on the same line.
+descHtml = string(descHtml);
+if startsWith(strtrim(descHtml), "<p>")
+    html = regexprep(descHtml, '<p>', char("<p>" + formHtml + " "), 'once');
+else
+    html = "<p>" + formHtml + "</p>" + newline + descHtml;
+end
+end
+
+function html = linkifyArgNames(html, argNames)
+% Post-process HTML to link standalone <code>name</code> references
+% in body text to their definitions in the argument sections.
+if isempty(argNames)
+    return
+end
+html = string(html);
+% Sort by length descending so longer names match first
+[~, order] = sort(strlength(argNames), 'descend');
+argNames = argNames(order);
+for k = 1:numel(argNames)
+    name = argNames(k);
+    html = strrep(html, ...
+        "<code>" + name + "</code>", ...
+        "<a href=""#arg-" + name + """ class=""arg-ref""><code>" + name + "</code></a>");
+end
 end
 
 %% ==== Argument Metadata Helpers ====
