@@ -9,6 +9,7 @@ Any `.m` file with standard `%` help comments already works. Authors can progres
 ## What's here
 
 - **[doc-framework-spec.md](doc-framework-spec.md)** — Functional specification for the comment grammar, rendering, and architecture
+- **[class-support-design.md](class-support-design.md)** - First pass at functional spec for classes.
 - **[prototype/](prototype/)** — Working MATLAB prototype (`mdoc`, `mdoc_parse`, `mdoc_render`, `mhelp`)
 - **Sample files** — Example functions at progressive markup levels:
   - [addgradient/](addgradient/), [rescale/](rescale/), [smoothts/](smoothts/) — functions
