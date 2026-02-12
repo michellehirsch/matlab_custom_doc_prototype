@@ -327,9 +327,9 @@ end
 function [posArgs, nvArgs] = parseArgumentsBlock(lines, searchFrom)
 % Find and parse the first arguments block after searchFrom
 posArgs = struct("Name", {}, "Size", {}, "Class", {}, "Default", {}, ...
-    "Validators", {}, "ShortDesc", {});
+    "Validators", {}, "ShortDesc", {}, "LongDesc", {});
 nvArgs = struct("Name", {}, "Size", {}, "Class", {}, "Default", {}, ...
-    "Validators", {}, "ShortDesc", {});
+    "Validators", {}, "ShortDesc", {}, "LongDesc", {});
 
 % Find 'arguments' keyword
 argBlockStart = 0;
@@ -353,20 +353,38 @@ if argBlockStart == 0
     return
 end
 
-% Parse lines until 'end'
+% Parse lines until 'end', accumulating preceding comments as LongDesc
+pendingComments = string.empty;
 for k = (argBlockStart + 1):numel(lines)
     stripped = strtrim(lines(k));
     if stripped == "end"
         break
     end
-    if stripped == "" || startsWith(stripped, "%")
+    if stripped == ""
+        % Blank line resets accumulated comments
+        pendingComments = string.empty;
+        continue
+    end
+    if startsWith(stripped, "%")
+        % Accumulate comment lines (strip leading "% " or "%")
+        commentText = regexprep(stripped, '^\%\s?', '');
+        pendingComments(end+1) = commentText; %#ok<AGROW>
         continue
     end
 
     arg = parseOneArgumentLine(stripped);
     if arg.Name == ""
+        pendingComments = string.empty;
         continue
     end
+
+    % Attach accumulated preceding comments as LongDesc
+    if ~isempty(pendingComments)
+        arg.LongDesc = strjoin(pendingComments, newline);
+    else
+        arg.LongDesc = "";
+    end
+    pendingComments = string.empty;
 
     if startsWith(arg.Name, "opts.") || startsWith(arg.Name, "options.")
         % Name-value argument: strip prefix for display name
@@ -455,6 +473,7 @@ end
 
 function args = mergeArgDescriptions(parsedArgs, longDescMap)
 % Merge long-form descriptions into parsed argument structs
+% Priority: ## Input/Output Arguments section > preceding comments > empty
 args = parsedArgs;
 for k = 1:numel(args)
     lookupName = char(args(k).Name);
@@ -463,9 +482,9 @@ for k = 1:numel(args)
         args(k).LongDesc = string(longDescMap(lookupName));
     elseif longDescMap.isKey(['opts.' lookupName])
         args(k).LongDesc = string(longDescMap(['opts.' lookupName]));
-    else
-        args(k).LongDesc = "";
     end
+    % Otherwise keep LongDesc from preceding comments (already set by
+    % parseArgumentsBlock), which may be "" if there were none.
 end
 end
 
