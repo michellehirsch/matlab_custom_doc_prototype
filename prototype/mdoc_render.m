@@ -44,12 +44,14 @@ if syntaxSource == "syntax_section"
     end
     if hasDescriptions || info.Description ~= ""
         parts{end+1} = '<h2>Description</h2>';
+        parts{end+1} = '<div class="description-body">';
         if hasDescriptions
             parts{end+1} = renderSyntaxDescriptions(info.SyntaxEntries);
         end
         if info.Description ~= ""
             parts{end+1} = blockMd(info.Description);
         end
+        parts{end+1} = '</div>';
     end
 else
     % For "description", "auto", and "legacy" sources, render the
@@ -58,7 +60,9 @@ else
     % calling-form-paragraph layout.
     if info.Description ~= ""
         parts{end+1} = '<h2>Description</h2>';
+        parts{end+1} = '<div class="description-body">';
         parts{end+1} = descriptionBlockMd(info.Description);
+        parts{end+1} = '</div>';
     end
 end
 
@@ -700,6 +704,7 @@ css = [...
     'a:hover { text-decoration: underline; }' newline ...
     '.see-also { margin-top: 8px; }' newline ...
     'img { max-width: 100%; margin: 8px 0; }' newline ...
+    '.description-body p { margin: 0; }' newline ...
     'hr.desc-sep { border: none; border-top: 1px solid var(--border); margin: 8px 0; }' newline ...
     '.section-header { display: flex; justify-content: space-between; align-items: baseline; }' newline ...
     '.section-header h2 { margin-bottom: 8px; }' newline ...
