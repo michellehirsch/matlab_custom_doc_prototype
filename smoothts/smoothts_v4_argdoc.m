@@ -19,41 +19,9 @@ function y = smoothts(x, opts)
 % `y = smoothts(x, Method="gaussian", Window=w, Sigma=s)` uses
 % Gaussian-weighted smoothing with explicit kernel width.
 %
-% ## Input Arguments
-%
-% `x` — Input time series.
-% Input time series, specified as a numeric vector or matrix.
-% If `x` is a matrix, each column is treated as an independent time
-% series and smoothed separately. `NaN` values are excluded from
-% window calculations (nanmean behavior).
-%
-% `opts.Method` — Smoothing method.
-% Smoothing method. Specify as one of:
-%
-%   - `"moving"` *(default)* — Simple moving average. Each output
-%     sample is the unweighted mean of the samples within the window.
-%   - `"exponential"` — Exponential smoothing. Recent samples are
-%     weighted more heavily using a decay factor derived from the
-%     window size: $\alpha = 2 / (w + 1)$.
-%   - `"gaussian"` — Gaussian-weighted smoothing. Samples are
-%     weighted by a Gaussian kernel centered on the current sample.
-%     The kernel width is controlled by `Sigma`.
-%
-% `opts.Window` — Window size (odd integer).
-% Window size, specified as a positive odd integer. The window is
-% centered on the current sample, extending `floor(Window/2)` samples
-% in each direction. At signal boundaries, the window shrinks so that
-% the output is the same length as the input.
-%
-% `opts.Sigma` — Gaussian kernel sigma.
-% Standard deviation of the Gaussian kernel, in samples. Only used
-% when `Method` is `"gaussian"`. Default is `Window/4`, which places
-% approximately 95% of the kernel weight within the window.
-%
 % ## Output Arguments
 %
-% `y` — Smoothed time series.
-% Smoothed time series, returned as a numeric array the same
+% `y` — Smoothed time series, returned as a numeric array the same
 % size as `x`.
 %
 % ## Examples
@@ -135,14 +103,38 @@ function y = smoothts(x, opts)
 % See also movmean, smoothdata, filter
 
 arguments
-    x               (:,:) double         % Input time series
+    % Input time series, specified as a numeric vector or matrix.
+    % If `x` is a matrix, each column is treated as an independent time
+    % series and smoothed separately. `NaN` values are excluded from
+    % window calculations (nanmean behavior).
+    x               (:,:) double              % Input time series
+
+    % Smoothing method. Specify as one of:
+    %
+    %   - `"moving"` *(default)* — Simple moving average. Each output
+    %     sample is the unweighted mean of the samples within the window.
+    %   - `"exponential"` — Exponential smoothing. Recent samples are
+    %     weighted more heavily using a decay factor derived from the
+    %     window size: $\alpha = 2 / (w + 1)$.
+    %   - `"gaussian"` — Gaussian-weighted smoothing. Samples are
+    %     weighted by a Gaussian kernel centered on the current sample.
+    %     The kernel width is controlled by `Sigma`.
     opts.Method     (1,1) string ...
                     {mustBeMember(opts.Method, ...
                     ["moving","exponential","gaussian"])} ...
                                 = "moving"    % Smoothing method
+
+    % Window size, specified as a positive odd integer. The window is
+    % centered on the current sample, extending `floor(Window/2)` samples
+    % in each direction. At signal boundaries, the window shrinks so that
+    % the output is the same length as the input.
     opts.Window     (1,1) double ...
                     {mustBePositive, mustBeInteger, ...
                     mustBeOdd} = 5            % Window size (odd integer)
+
+    % Standard deviation of the Gaussian kernel, in samples. Only used
+    % when `Method` is `"gaussian"`. Default is `Window/4`, which places
+    % approximately 95 % of the kernel weight within the window.
     opts.Sigma      (1,1) double ...
                     {mustBePositive} = NaN    % Gaussian kernel sigma
 end

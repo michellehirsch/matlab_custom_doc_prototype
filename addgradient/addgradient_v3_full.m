@@ -7,23 +7,23 @@ function p = addgradient(ax, opts)
 %
 % ## Input Arguments
 %
-% **ax** — Target axes. If omitted, uses the current axes (`gca`).
+% `ax` — Target axes. If omitted, uses the current axes (`gca`).
 %
-% **opts.TopColor** — Color at the top of the gradient. Specify as an
+% `opts.TopColor` — Color at the top of the gradient. Specify as an
 % RGB triplet `[R G B]` with values in the range `[0, 1]`. Default
 % is a light gray `[0.95 0.95 0.95]`.
 %
-% **opts.BottomColor** — Color at the bottom of the gradient. Specify
+% `opts.BottomColor` — Color at the bottom of the gradient. Specify
 % as an RGB triplet `[R G B]`. Default is a medium gray
 % `[0.75 0.75 0.75]`.
 %
-% **opts.FaceAlpha** — Gradient transparency. Scalar in the range
+% `opts.FaceAlpha` — Gradient transparency. Scalar in the range
 % `[0, 1]` where `0` is fully transparent and `1` is fully opaque.
 % Default is `1`.
 %
 % ## Output Arguments
 %
-% **p** — Handle to the patch object used to draw the gradient,
+% `p` — Handle to the patch object used to draw the gradient,
 % returned as a `matlab.graphics.primitive.Patch`. Use this to further
 % customize the gradient appearance after creation.
 %

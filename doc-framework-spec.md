@@ -180,9 +180,11 @@ If the help block contains a line beginning with `See also` (case-insensitive), 
 
 ## Argument Documentation Grammar
 
+There are three ways to document arguments, in order of increasing detail. Authors choose based on the complexity of their arguments. These same rules apply symmetrically to `arguments (Output)` blocks.
+
 ### Inline Short Description
 
-A trailing `%` comment on an argument line in the `arguments` block provides the short description:
+A trailing `%` comment on an argument line in the `arguments` block provides the **short description**. It appears in argument summary tables in the rendered output. If no long-form description exists, it also serves as the long-form description.
 
 ```matlab
 arguments
@@ -192,11 +194,40 @@ arguments
 end
 ```
 
-The inline comment should be a single concise phrase or sentence. It appears in argument summary tables in the rendered output.
+The inline comment should be a single concise phrase or sentence.
 
-### Long-Form Descriptions
+### Long-Form Descriptions in the `arguments` Block
 
-For input arguments requiring more explanation, a `## Input Arguments` section in the help comment block provides extended descriptions, keyed by argument name (matched case-sensitively). Output arguments are documented in a `## Output Arguments` section using the same pattern.
+For arguments requiring more explanation, a `%` comment block **immediately preceding** the argument declaration provides the long-form description. The trailing `%` comment still provides the short description.
+
+```matlab
+arguments
+    % Input signal, specified as a real or complex-valued row vector.
+    % The function does not validate monotonicity.
+    x              (1,:) double              % Input signal
+
+    % Interpolation method. Specify as one of:
+    %
+    %   - `"linear"` *(default)* — piecewise linear interpolation
+    %   - `"cubic"` — cubic Hermite interpolation
+    %   - `"spline"` — not-a-knot spline interpolation
+    opts.Method    string = "linear"         % Interpolation method
+
+    % When `true`, prints progress messages to the command window
+    % during computation.
+    opts.Verbose   (1,1) logical = false     % Enable verbose output
+end
+```
+
+The long description should **repeat/incorporate the short description** so it reads naturally as a standalone paragraph. The renderer does not merge them — each is used independently (short in summary tables, long in detail sections).
+
+This approach works best when descriptions are short to moderate (1–5 lines per argument). For arguments with extensive documentation (bulleted option lists, multi-paragraph explanations, math), the help-block approach below may be cleaner, since it avoids interleaving prose with type/size/validator declarations.
+
+### Long-Form Descriptions in `## Input Arguments` / `## Output Arguments`
+
+For input arguments requiring more explanation, a `## Input Arguments` section in the help comment block provides extended descriptions, keyed by argument name wrapped in backticks (matched case-sensitively). Output arguments are documented in a `## Output Arguments` section using the same pattern. In the rendered output, argument names are displayed in **bold monospace** — the renderer adds bold styling even though the source uses only backticks.
+
+Each entry has a **structural short/long split**: the text on the same line as `` `argName` — `` is the short description; additional lines below it form the long description (which should repeat/incorporate the short description so it reads naturally on its own).
 
 ```matlab
 % myFunc  Interpolate signal x using the specified method.
@@ -205,21 +236,24 @@ For input arguments requiring more explanation, a `## Input Arguments` section i
 %
 % ## Input Arguments
 %
-% **x** — Input signal. Can be real or complex valued. Must be a
-% nonempty row vector. The function does not validate monotonicity.
+% `x` — Input signal.
+% Input signal, specified as a real or complex-valued row vector. The
+% function does not validate monotonicity.
 %
-% **opts.Method** — Interpolation method. Specify as one of:
+% `opts.Method` — Interpolation method.
+% Interpolation method. Specify as one of:
 %
 %   - `"linear"` *(default)* — piecewise linear interpolation
 %   - `"cubic"` — cubic Hermite interpolation
 %   - `"spline"` — not-a-knot spline interpolation
 %
-% **opts.Verbose** — When `true`, prints progress to the command window.
+% `opts.Verbose` — Enable verbose output.
 %
 % ## Output Arguments
 %
-% **out** — Interpolated values, returned as a row vector the same
-% length as `xi`.
+% `out` — Interpolated values.
+% Interpolated values, returned as a row vector the same length as
+% `xi`.
 %
 function out = myFunc(x, opts)
     arguments
@@ -229,11 +263,31 @@ function out = myFunc(x, opts)
     end
 ```
 
-The renderer merges inline and long-form descriptions: if a long-form entry exists for an argument, it appears in the argument detail section; the inline comment still populates summary tables. If no long-form entry exists, the inline comment serves both roles.
+For simple arguments where the short description says everything needed, the long description can be omitted — the entry is just the one line:
 
-**Rationale for this design:** Inline-only descriptions are insufficient for arguments with multiple options, complex behavior, or type nuances. The `opts.Method` example above — with three named options and their descriptions — cannot be expressed cleanly in a single trailing comment. Keeping extended descriptions in the main help block, keyed by name, avoids duplicating the structural information (types, defaults, validation) already present in the `arguments` block.
+```
+% `opts.Verbose` — Enable verbose output.
+```
 
-*Alternative considered: continuation lines (e.g., `%<`) adjacent to each argument line in the `arguments` block. Rejected because it complicates the readability of the `arguments` block and makes multi-paragraph descriptions difficult to format naturally.*
+### Override Rules
+
+The renderer resolves argument documentation using the **first available** source from this priority list:
+
+| Priority | Source | Short description | Long description |
+|----------|--------|-------------------|-----------------|
+| 1 (highest) | `## Input Arguments` section | Text after `` `arg` — `` on same line | Remaining lines below |
+| 2 | Preceding `%` block + trailing `%` in `arguments` block | Trailing comment | Preceding block |
+| 3 | Trailing `%` only in `arguments` block | Trailing comment | Trailing comment (serves both) |
+| 4 | `arguments` block, no comments | — | — (type/size/default still auto-rendered) |
+| 5 (lowest) | Function declaration only | — | — (just argument name) |
+
+**Section wins entirely.** If a `## Input Arguments` section exists in the help block, it is the sole source for **all** input argument documentation. Preceding comments and trailing comments in the `arguments` block are treated as ordinary code comments (not rendered as documentation). The same rule applies independently for `## Output Arguments` vs. `arguments (Output)` block documentation.
+
+This means you can freely mix approaches across input vs. output (e.g., arguments-block docs for inputs, `## Output Arguments` in help for outputs). But you cannot mix per-argument within the same category — all input args come from one source, all output args come from one source.
+
+**Rationale:** Per-argument merging across two locations would be confusing to authors and hard for tooling to surface clearly. The "section wins entirely" rule is simple to explain and implement.
+
+*Alternative previously considered: continuation lines (e.g., `%<`) adjacent to each argument line in the `arguments` block. This was rejected in favor of standard `%` comment blocks preceding the argument line, which use familiar comment syntax and support multi-paragraph descriptions naturally.*
 
 ---
 
@@ -442,8 +496,8 @@ The generated site mirrors the structure and visual style of MATLAB's official p
 | Display math | `% $$...$$` | Help comment |
 | Callout | `% > [!NOTE] ...` | Help comment |
 | Arg short desc | Trailing `% text` on argument line | `arguments` block |
-| Input arg long desc | `**argName** — ...` under `## Input Arguments` | Help comment |
-| Output arg desc | `**argName** — ...` under `## Output Arguments` | Help comment |
+| Input arg long desc | `` `argName` — ... `` under `## Input Arguments` | Help comment |
+| Output arg desc | `` `argName` — ... `` under `## Output Arguments` | Help comment |
 | Syntax annotation | `` % `out = f(x, Name=val)` description `` under `## Syntax` | Help comment |
 | See also | `% See also a, b, c` | Help comment |
 | Examples | `% ## Examples` + fenced code blocks | Help comment |

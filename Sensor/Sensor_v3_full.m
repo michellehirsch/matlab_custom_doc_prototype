@@ -7,24 +7,24 @@ classdef Sensor
 %
 % ## Properties
 %
-% **Name** — Display name of the sensor, such as `"Thermocouple-01"`.
+% `Name` — Display name of the sensor, such as `"Thermocouple-01"`.
 % Used as a label in plots and log output. Must be a nonempty string.
 %
-% **Type** — Sensor category. Specify as a string such as
+% `Type` — Sensor category. Specify as a string such as
 % `"temperature"`, `"pressure"`, or `"humidity"`. The type is
 % informational and does not affect computation.
 %
-% **Value** — Most recent reading, stored as a scalar double. The
+% `Value` — Most recent reading, stored as a scalar double. The
 % value reflects the raw reading adjusted by the calibration `Offset`.
 % Initialized to `NaN` before the first reading.
 %
-% **Units** — Measurement unit string, such as `"C"`, `"Pa"`, or
+% `Units` — Measurement unit string, such as `"C"`, `"Pa"`, or
 % `"%RH"`. Used for display and labeling only. Default is `""`.
 %
-% **Timestamp** — Time of the most recent reading, stored as a
+% `Timestamp` — Time of the most recent reading, stored as a
 % `datetime`. Initialized to `NaT` before the first reading.
 %
-% **Offset** — Calibration offset applied to raw readings. Set by
+% `Offset` — Calibration offset applied to raw readings. Set by
 % the `calibrate` method. Default is `0`.
 %
 % ## Examples
@@ -70,13 +70,13 @@ classdef Sensor
         %
         % ## Input Arguments
         %
-        % **name** — Display name for the sensor. Specify as a
+        % `name` — Display name for the sensor. Specify as a
         % string or character vector.
         %
-        % **type** — Sensor category. Specify as a string such as
+        % `type` — Sensor category. Specify as a string such as
         % `"temperature"`, `"pressure"`, or `"humidity"`.
         %
-        % **opts.Units** — Measurement unit label. Specify as a
+        % `opts.Units` — Measurement unit label. Specify as a
         % string such as `"C"`, `"Pa"`, or `"%RH"`. Default is `""`.
             arguments
                 name  (1,1) string               % Sensor name
@@ -97,7 +97,7 @@ classdef Sensor
         %
         % ## Input Arguments
         %
-        % **value** — Raw sensor reading. Specify as a scalar double.
+        % `value` — Raw sensor reading. Specify as a scalar double.
         % The calibration offset is added before storing.
             arguments
                 obj
@@ -117,7 +117,7 @@ classdef Sensor
         %
         % ## Input Arguments
         %
-        % **knownValue** — Reference value from a calibration
+        % `knownValue` — Reference value from a calibration
         % standard. Specify as a scalar double.
             arguments
                 obj

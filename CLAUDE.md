@@ -20,7 +20,7 @@ The grammar being designed uses standard `% ` comment lines with embedded MFM (M
 - Help comments = contiguous `%` block immediately after `function` or `classdef` declaration
 - First line convention: `% functionName  One-line synopsis`
 - Argument short descriptions: trailing `%` comment on `arguments` block lines
-- Argument long descriptions: `## Input Arguments` / `## Output Arguments` sections in the help block, keyed by argument name (e.g., `**argName** — description`)
+- Argument long descriptions: `## Input Arguments` / `## Output Arguments` sections in the help block, keyed by argument name in backticks (e.g., `` `argName` — description ``)
 - Recognized section headings drive structured rendering: `## Syntax`, `## Input Arguments`, `## Output Arguments`, `## Examples`, `## Tips`, `## Version History`, `## Algorithms`, `## References`, `## More About`
 - `See also name1, name2` (no heading needed) renders as hyperlinks
 - No `%[text]` tags needed in help comments — position identifies them as documentation. Tags only appear for embedded images (binary encoded in file appendix).

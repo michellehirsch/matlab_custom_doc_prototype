@@ -287,7 +287,7 @@ description = strtrim(description);
 end
 
 function argDescs = extractArgDescriptions(sections, sectionName)
-% Extract **argName** — description entries from a section
+% Extract `argName` — description entries from a section
 argDescs = containers.Map;
 for k = 1:numel(sections)
     if sections(k).Heading == sectionName
@@ -299,8 +299,8 @@ for k = 1:numel(sections)
 
         for j = 1:numel(contentLines)
             line = contentLines(j);
-            % Match **argName** or **opts.argName** pattern
-            tok = regexp(line, '^\s*\*\*(\S+?)\*\*\s*[-\x{2014}]\s*(.*)', 'tokens');
+            % Match `argName` or `opts.argName` — description pattern
+            tok = regexp(line, '^\s*`(\S+?)`\s*[-\x{2014}]\s*(.*)', 'tokens');
             if ~isempty(tok)
                 % Save previous
                 if currentName ~= ""

@@ -11,27 +11,27 @@ classdef DataLogger < handle
 %
 % ## Properties
 %
-% **Name** — Display name for the logger. Used as a label in log file
+% `Name` — Display name for the logger. Used as a label in log file
 % headers and diagnostic messages. Default is `"Untitled"`.
 %
-% **LogFile** — Path to the output CSV file. Specify as a string.
+% `LogFile` — Path to the output CSV file. Specify as a string.
 % When empty (`""`), data is buffered in memory only and not written
 % to disk. Can be set before calling `start` or changed while logging
 % (the new file takes effect on the next flush).
 %
-% **SampleRate** — Expected sample rate in Hz. Informational only;
+% `SampleRate` — Expected sample rate in Hz. Informational only;
 % the logger does not enforce sample timing. Used to populate log
 % file metadata. Default is `1`.
 %
-% **BufferSize** — Maximum number of samples to hold in memory before
+% `BufferSize` — Maximum number of samples to hold in memory before
 % auto-flushing to disk. When the buffer reaches this limit, the
 % `BufferFull` event fires and, if `LogFile` is set, data is written
 % to disk and the buffer is cleared. Default is `10000`.
 %
-% **IsRunning** — Indicates whether the logger is actively accepting
+% `IsRunning` — Indicates whether the logger is actively accepting
 % data. Read-only. Set to `true` by `start` and `false` by `stop`.
 %
-% **NumSamples** — Total number of samples logged since the last
+% `NumSamples` — Total number of samples logged since the last
 % `start`, including samples already flushed to disk. Read-only.
 %
 % ## Examples
@@ -140,14 +140,14 @@ classdef DataLogger < handle
         %
         % ## Input Arguments
         %
-        % **name** — Display name for the logger.
+        % `name` — Display name for the logger.
         %
-        % **opts.LogFile** — Path to output CSV file. Default is `""`.
+        % `opts.LogFile` — Path to output CSV file. Default is `""`.
         %
-        % **opts.SampleRate** — Expected sample rate in Hz. Default
+        % `opts.SampleRate` — Expected sample rate in Hz. Default
         % is `1`.
         %
-        % **opts.BufferSize** — Maximum buffer size. Default is
+        % `opts.BufferSize` — Maximum buffer size. Default is
         % `10000`.
             arguments
                 name           (1,1) string            % Logger name
@@ -207,7 +207,7 @@ classdef DataLogger < handle
         %
         % ## Input Arguments
         %
-        % **value** — Scalar numeric value to record.
+        % `value` — Scalar numeric value to record.
             arguments
                 obj
                 value (1,1) double               % Value to log
@@ -237,7 +237,7 @@ classdef DataLogger < handle
         %
         % ## Output Arguments
         %
-        % **tt** — Buffered data, returned as a `timetable`. The
+        % `tt` — Buffered data, returned as a `timetable`. The
         % `Time` variable contains `datetime` timestamps and `Value`
         % contains the logged numeric values.
             tt = timetable(obj.TimeBuffer, obj.Buffer, ...
@@ -259,7 +259,7 @@ classdef DataLogger < handle
         %
         % ## Input Arguments
         %
-        % **filename** — Output file path. Specify as a string.
+        % `filename` — Output file path. Specify as a string.
         %
         % ## Examples
         %

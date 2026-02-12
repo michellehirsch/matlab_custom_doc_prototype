@@ -5,26 +5,10 @@ function y = rescale(x, a, b)
 % range $[a, b]$. The minimum value of `x` maps to `a` and the maximum
 % maps to `b`. Values between are linearly interpolated.
 %
-% ## Input Arguments
-%
-% `x` — Input data array.
-% Input data, specified as a vector, matrix, or N-D array. All
-% elements participate in determining the min and max used for scaling.
-% If all elements of `x` are equal, the output contains `NaN` values
-% due to division by zero; consider adding a guard if this case may
-% arise.
-%
-% `a` — Lower bound of target range.
-%
-% `b` — Upper bound of target range.
-% Upper bound of the target range. If `b < a`, the output is reversed
-% (maximum of `x` maps to `a`).
-%
 % ## Output Arguments
 %
-% `y` — Rescaled data.
-% Rescaled data, returned as an array the same size as `x` with values
-% in the range $[a, b]$.
+% `y` — Rescaled data, returned as an array the same size as `x`
+% with values in the range $[a, b]$.
 %
 % ## Examples
 %
@@ -71,8 +55,18 @@ function y = rescale(x, a, b)
 % See also normalize, mapminmax
 
 arguments
+    % Input data, specified as a vector, matrix, or N-D array. All
+    % elements participate in determining the min and max used for
+    % scaling. If all elements of `x` are equal, the output contains
+    % `NaN` values due to division by zero; consider adding a guard if
+    % this case may arise.
     x        double              % Input data array
+
+    % Lower bound of the target range.
     a (1,1)  double = 0          % Lower bound of target range
+
+    % Upper bound of the target range. If `b < a`, the output is
+    % reversed (maximum of `x` maps to `a`).
     b (1,1)  double = 1          % Upper bound of target range
 end
 y = a + (x - min(x(:))) ./ (max(x(:)) - min(x(:))) * (b - a);
