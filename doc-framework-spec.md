@@ -27,6 +27,42 @@ The MATLAB Custom Documentation Framework enables authors to write richly format
 
 ---
 
+## Design Philosophy: Single Source of Truth
+
+The framework's overarching principle is **single source of truth**: every piece of rendered documentation should trace back to exactly one authoritative location, and that location should be as close to the corresponding code as possible.
+
+This principle drives a deliberate split between what the framework generates automatically from code and what the author must provide manually. The rules of thumb are:
+
+1. **If the code is sufficient documentation, use it.** Argument names, types, sizes, defaults, and validators are already declared in `arguments` blocks — the framework extracts them directly. There is no reason for the author to repeat this information in prose.
+
+2. **If the author must add information, keep it close to the code.** Argument descriptions go as inline or preceding comments right next to the argument declaration in the `arguments` block. Property descriptions go next to the property declaration. This proximity makes the documentation easy to find, easy to keep in sync, and hard to forget.
+
+3. **If there is no natural code location for the information, it goes in the help comment block.** Some documentation — the synopsis, examples, tips, algorithms — has no corresponding code construct. These live in the help comment block, organized by recognized `##` section headings.
+
+### What's Automatic vs. What's Manual
+
+| Page element | Automatic from code | Author provides | Where the author writes it |
+|---|---|---|---|
+| **Title** | Function/class name | — | — |
+| **Synopsis** | — | One-line description | First line of help comment |
+| **Syntax block** | Generated from `metafunction` / `arguments` block (calling forms only, no descriptions) | Calling forms + descriptions | Calling-form paragraphs in description text, or `## Syntax` section |
+| **Description** | — | Free-form prose, optionally with calling-form paragraphs | Help comment body (before any `##` heading) |
+| **Input arguments: name, type, size, default** | Extracted from `arguments` block | — | — |
+| **Input arguments: descriptions** | — | Short and/or long descriptions | Inline/preceding comments in `arguments` block, or `## Input Arguments` section |
+| **Output arguments: name, type, size** | Extracted from `arguments (Output)` block if present | — | — |
+| **Output arguments: descriptions** | — | Short and/or long descriptions | Comments in `arguments (Output)` block, or `## Output Arguments` section |
+| **Name-value arguments** | Name, type, size, default from `arguments` block | Descriptions | Same as input arguments |
+| **Properties** | Name, type, size, default from `properties` block | Descriptions | Inline/preceding comments in `properties` block, or `## Properties` section |
+| **See also** | — | Related function names | `See also` line in help comment |
+| **Examples** | — | Code examples with narrative | `## Examples` section |
+| **Tips, Algorithms, References, etc.** | — | Prose content | Corresponding `##` sections |
+| **Version History** | — | Release history entries | `## Version History` section |
+| **Methods (class page)** | Method list auto-aggregated from class | Per-method documentation | Each method's own help comment |
+
+This table illustrates the progressive enhancement model: a bare function with an `arguments` block already produces a page with a title, a syntax block, and a fully structured argument table (names, types, defaults). Every row in the "Author provides" column is optional — the author adds only what they want, where they want it.
+
+---
+
 ## Help Comment Grammar
 
 ### What Constitutes a Help Comment
@@ -155,6 +191,60 @@ Auto-generated forms have no descriptions — only the compact syntax block is r
 **Legacy fallback** — if the function has no `arguments` block (`Signature.HasInputValidation` is false), or if `metafunction` is unavailable, the renderer strips the `function` keyword from the declaration line.
 
 **Calling-form detection heuristic:** A paragraph is recognized as a calling-form paragraph if its first inline element is a backtick-wrapped expression containing the function name followed by `(`. Plain-text calling forms (without backticks) are treated as regular prose for backward compatibility — existing unenhanced help text renders as an unstructured Description, the same as today.
+
+#### The Syntax Description Gap
+
+The syntax block is the one major page element where the single-source-of-truth principle encounters a structural limitation. For arguments, the framework's strategy works cleanly: the code declares arguments in the `arguments` block, and the author puts descriptions right next to each declaration — the code construct and its documentation live side by side. For syntax, there is no analogous code construct. A function's calling forms are *emergent* — they arise from the combination of required arguments, optional arguments, name-value arguments, and output arguments — but they are not declared anywhere in the source file. There is no place next to the code where the author can annotate "this calling form does X."
+
+This creates an all-or-nothing gap between zero effort and full manual authoring:
+
+| Approach | Syntax block | Syntax descriptions | Author effort |
+|---|---|---|---|
+| **Do nothing** (Priority 3) | Auto-generated from `metafunction` — correct, complete | None — syntax block only, no per-syntax descriptions | Zero |
+| **Calling-form paragraphs** (Priority 2) | Extracted from author's backtick-wrapped forms | Author writes a paragraph per form | Must write every form + description manually |
+| **`## Syntax` section** (Priority 1) | From the section | Author writes a paragraph per form | Must write every form + description manually |
+
+There is no middle ground where the author gets the auto-generated forms *and* attaches descriptions to them. The moment the author writes any calling-form paragraph or `## Syntax` entry, auto-generation turns off entirely and the author owns the full set. This is by design — partial override of an auto-generated list would be confusing and fragile — but it means the step from "free syntax block" to "syntax block with descriptions" is a significant jump in authoring effort.
+
+**Why this gap exists and why it's acceptable:**
+
+- The syntax block alone (no descriptions) is already useful. Many internal and community functions ship with just a list of calling forms and no per-form descriptions; the reader infers meaning from argument names and the argument detail section below.
+- The gap only affects *descriptions of calling forms*. The auto-generated syntax block itself is free and accurate. The argument detail section (names, types, defaults, descriptions) is also independent and can be fully documented close to the code. So even at zero effort, the page is structured and informative.
+- Syntaxes are inherently a *summary-level concern* — they describe the function's external API, not any single code construct. Documenting them in the help comment block (rather than next to code) is appropriate because they are about the function as a whole.
+
+**Rationale for all-or-nothing behavior:** An additive or merge model — where the author writes descriptions for *some* forms and the renderer auto-generates the rest — was considered and rejected. It would require a matching algorithm (which auto-generated form does this description attach to?), would silently break when the `arguments` block changes, and would make it unclear to the author what the reader sees. The current model is simple: if you write syntax entries, you own all of them; if you don't, the renderer handles it.
+
+#### Potential Editor Workflows for Bridging the Gap
+
+The gap between auto-generated syntaxes (no descriptions) and fully manual syntaxes (with descriptions) could be eased by editor tooling that helps the author graduate from Priority 3 to Priority 2 or Priority 1 without starting from a blank page. Several approaches could help:
+
+**1. "Populate Syntax" code action / quick fix.** The editor detects that a function has an `arguments` block but no calling-form paragraphs or `## Syntax` section. It offers a code action (lightbulb menu or right-click) that inserts a scaffolded set of calling-form paragraphs into the help comment, pre-filled with the same forms that auto-generation would produce. The author then edits these paragraphs to add descriptions. For `weightedmean`, this would insert:
+
+```matlab
+% weightedmean  Compute the weighted mean of an array.
+%
+% `m = weightedmean(x)`
+%
+% `m = weightedmean(x, w)`
+%
+% `m = weightedmean(x, w, dim)`
+%
+% `___ = weightedmean(___, Name=Value)`
+%
+% `[m, ci] = weightedmean(___)`
+```
+
+Each calling-form paragraph is ready for the author to append a description after the backtick-wrapped form. This eliminates the tedious work of figuring out and typing each calling form — the author's only task is writing descriptions.
+
+**2. "Populate Syntax Section" variant.** Same idea, but inserts a `## Syntax` section instead of calling-form paragraphs in the description body. Useful for authors who prefer the `## Syntax` organizational style.
+
+**3. Staleness detection / sync warnings.** When the author has calling-form paragraphs or a `## Syntax` section, the editor compares the documented forms against what `metafunction` would generate. If the `arguments` block has changed (e.g., a new optional argument was added), the editor warns that the documented syntaxes may be out of date. This could surface as:
+- A diagnostic/warning squiggle on the `## Syntax` heading or on calling-form paragraphs that don't match current metadata
+- A quick fix to insert a new calling-form paragraph for the unmatched argument
+
+**4. Live preview pane.** A side panel shows the rendered doc page as the author edits. This helps the author see what the reader will see — particularly useful for verifying that calling-form paragraphs are being detected correctly and that the syntax block looks right.
+
+These are editor features, not grammar changes — they don't affect the spec's syntax rules or priority model. They simply reduce the friction of moving from zero-effort auto-generated syntaxes to fully documented syntaxes.
 
 ### Input Arguments
 Auto-generated from the `arguments` block for inputs. Each entry includes:
