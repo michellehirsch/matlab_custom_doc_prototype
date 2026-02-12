@@ -12,8 +12,8 @@ Any `.m` file with standard `%` help comments already works. Authors can progres
 - **[class-support-design.md](class-support-design.md)** - First pass at functional spec for classes.
 - **[prototype/](prototype/)** — Working MATLAB prototype (`mdoc`, `mdoc_parse`, `mdoc_render`, `mhelp`)
 - **Sample files** — Example functions at progressive markup levels:
-  - [addgradient/](addgradient/), [rescale/](rescale/), [smoothts/](smoothts/) — functions
-  - [Sensor/](Sensor/), [DataLogger/](DataLogger/) — classes
+  - [addgradient/](SampleFiles/addgradient/), [rescale/](SampleFiles/rescale/), [smoothts/](SampleFiles/smoothts/) — functions
+  - [Sensor/](SampleFiles/Sensor/), [DataLogger/](SampleFiles/DataLogger/) — classes
 
 ## Quick start
 
