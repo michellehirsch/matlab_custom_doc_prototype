@@ -100,6 +100,18 @@ Help comments support a Markdown subset for formatting. The `% ` prefix is strip
 | `$...$` | Inline math (LaTeX) |
 | `$$...$$` | Display math (LaTeX) |
 
+**Paragraph and line-break handling:** Standard Markdown whitespace rules apply after stripping the `% ` prefix. A blank comment line (`%` alone or `% ` with only whitespace) becomes a blank line in the stripped text, which separates paragraphs. Consecutive non-blank lines within the same paragraph are joined with a space (soft wraps). This means existing plain-text help comments — which already use blank `%` lines between paragraphs — render with correct paragraph breaks and no markup required. Authors do not need to add any formatting to get proper paragraph separation; the blank lines they already write are sufficient.
+
+**Indented code blocks:** Lines indented by two or more spaces (after stripping the `% ` prefix) are rendered as preformatted code blocks, matching the traditional MATLAB help convention where examples are written with indentation. Consecutive indented lines are grouped into a single code block. This means existing help text like:
+
+```matlab
+% Example
+%   x = [1 2 3 4 5];
+%   y = rescale(x)
+```
+
+renders "Example" as a paragraph and the indented lines as a syntax-highlighted code block — with no fenced code block markup required. Authors who prefer explicit control can use fenced code blocks (` ``` `) instead; fenced blocks take priority and are not affected by indentation.
+
 Markdown syntax is stripped (not rendered) by the `help` command, which displays plain text as today. In a future richer command window, basic Markdown rendering (bold, code) may be supported where the terminal allows it.
 
 ### The First Line (Synopsis)

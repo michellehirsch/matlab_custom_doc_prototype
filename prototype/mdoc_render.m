@@ -498,12 +498,41 @@ while i <= numel(lines)
         continue
     end
 
-    % --- Paragraph: consecutive non-blank, non-block lines ---
+    % --- Indented code block (2+ leading spaces, traditional MATLAB help) ---
+    if startsWith(line, "  ")
+        codeLines = {};
+        while i <= numel(lines)
+            if strtrim(lines(i)) == ""
+                % Blank line: include if more indented lines follow
+                lookahead = i + 1;
+                while lookahead <= numel(lines) && strtrim(lines(lookahead)) == ""
+                    lookahead = lookahead + 1;
+                end
+                if lookahead <= numel(lines) && startsWith(lines(lookahead), "  ")
+                    codeLines{end+1} = ''; %#ok<AGROW>
+                    i = i + 1;
+                else
+                    break
+                end
+            elseif startsWith(lines(i), "  ")
+                codeLines{end+1} = char(esc(lines(i))); %#ok<AGROW>
+                i = i + 1;
+            else
+                break
+            end
+        end
+        out{end+1} = sprintf('<pre><code class="language-matlab">%s</code></pre>', ...
+            strjoin(string(codeLines), newline)); %#ok<AGROW>
+        continue
+    end
+
+    % --- Paragraph: consecutive non-blank, non-block, non-indented lines ---
     paraLines = {};
     while i <= numel(lines)
         s = strtrim(lines(i));
         if s == "" || startsWith(s, "```") || startsWith(s, "### ") || ...
                 startsWith(s, "- ") || startsWith(s, "> [!") || ...
+                startsWith(lines(i), "  ") || ...
                 ~isempty(regexp(s, '^\d+\.\s+', 'once'))
             break
         end
@@ -1043,7 +1072,9 @@ css = [...
     'a:hover { text-decoration: underline; }' newline ...
     '.see-also { margin-top: 8px; }' newline ...
     'img { max-width: 100%; margin: 8px 0; }' newline ...
-    '.description-body p { margin: 0; }' newline ...
+    '.description-body p { margin: 0 0 0.75em 0; }' newline ...
+    '.description-body p:last-child { margin-bottom: 0; }' newline ...
+    '.desc-entry p { margin: 0; }' newline ...
     'hr.desc-sep { border: none; border-top: 1px solid var(--border); margin: 8px 0; }' newline ...
     '.section-header { display: flex; justify-content: space-between; align-items: baseline; }' newline ...
     '.section-header h2 { margin-bottom: 8px; }' newline ...
