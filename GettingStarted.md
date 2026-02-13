@@ -239,72 +239,52 @@ When present, `## Syntax` replaces the auto-generated syntax block entirely, and
 
 ## Class Documentation
 
-The same progressive model applies to classes. Properties, methods, and events all support the same comment grammar.
+The same progressive model applies to classes. The framework auto-generates class pages from `classdef` definitions — property tables, method lists, and constructor signatures — and everything you learned about function documentation applies to each method. Classes introduce a few additional concepts: property descriptions, property groups, events, and class-level structured sections.
 
-### Traditional class help
+We'll walk through the `Sensor` class, again building from zero comments to a fully documented class page. As with `rescale`, all versions share the same code — only the comments change.
 
-A `classdef` with standard help comments, plain properties, and plain method help:
+---
+
+### Step 1: Start with just code
+
+A class with typed properties and `arguments` blocks, but no comments at all:
 
 ```matlab
 classdef Sensor
-% Sensor  Represent a sensor with a name, type, and current reading.
 
     properties
-        Name
-        Type
-        Value
-        Units
-        Timestamp
-        Offset
+        Name      (1,1) string
+        Type      (1,1) string
+        Value     (1,1) double      = NaN
+        Units     (1,1) string      = ""
+        Timestamp (1,1) datetime    = NaT
+        Offset    (1,1) double      = 0
     end
 
     methods
         function obj = Sensor(name, type, opts)
-        % Sensor  Create a Sensor object.
-        ...
+            arguments
+                name  (1,1) string
+                type  (1,1) string
+                opts.Units (1,1) string = ""
+            end
+            ...
 ```
 
-The renderer creates a class page with a title, synopsis, property table, and method list — all auto-generated from the class definition.
+The renderer auto-generates a class page with title, property table (with types and defaults), method list with signatures, and constructor arguments — all from the code alone.
 
-![Sensor v1 — traditional class help](images/Sensor_v1.png)
+> [Full source](SampleFiles/Sensor/Sensor_v0_bare.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v0_bare.html)
 
-> [Full source](SampleFiles/Sensor/Sensor_v1_plain.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v1_plain.html)
+---
 
-### Full class features
+### Step 2: Add inline descriptions
 
-Classes leverage all of the syntax defined for functions. Help pages are generated for each method that is not hidden, protected or private. 
-
-Additionally:
-* Describe properties using the same grammar as for function arguments: inline comment in the property definition for a short description, comments on preceding lines for a long description, or override with a ## Properties section in the class help.
-* Define labeled property groups by defining properties into multiple `property` blocks. Define the group label with an inline comment in the property block definition
+Add trailing `%` comments on property definitions and `arguments` block lines — the same grammar used for function arguments:
 
 ```matlab
-classdef Sensor
-% Sensor  Represent a sensor with a name, type, and current reading.
-%
-% A `Sensor` object stores metadata about a physical sensor and its
-% most recent reading.
-%
-% ## Examples
-%
-% ### Create a sensor and take a reading
-%
-% ```matlab
-% s = Sensor("Thermocouple-01", "temperature", "C");
-% s = s.read(23.5);
-% ```
-```matlab
-    properties % Sensor
-        %  Display name of the sensor, such as `"Thermocouple-01"`.
-        % Used as a label in plots and log output. Must be a nonempty string.
+    properties
         Name      (1,1) string                  % Sensor display name
-
-        % Sensor category, specified as a string such as
-        % `"temperature"`, `"pressure"`, or `"humidity"`.
         Type      (1,1) string                  % Sensor category
-    end
-
-   properties  % Sensor readings 
         Value     (1,1) double      = NaN       % Most recent reading
         Units     (1,1) string      = ""        % Measurement units
         Timestamp (1,1) datetime    = NaT       % Time of last reading
@@ -312,14 +292,156 @@ classdef Sensor
     end
 ```
 
-Property constraints and inline `%` comments auto-generate a detailed property table. The `## Properties` section adds long descriptions. Methods get structured argument documentation just like standalone functions.
+The property table and method argument tables now include short descriptions alongside the auto-generated types and defaults.
 
-![Sensor v3 — full class features](images/Sensor_v3.png)
+> [Full source](SampleFiles/Sensor/Sensor_v1_args.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v1_args.html)
 
-> [Full source](SampleFiles/Sensor/Sensor_v3_full.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v3_full.html)
+---
+
+### Step 3: Add help blocks
+
+Add `%` comment blocks to the `classdef` and to each method. Traditional plain-text help works just as it does for functions (see [v2 source](SampleFiles/Sensor/Sensor_v2_plain.m)), but here we show the Markdown version since the function walkthrough already covered that transition. The class help block provides a synopsis and description for the class page. Each method gets its own help block and its own doc page (for public methods that are not hidden).
+
+```matlab
+classdef Sensor
+% Sensor  Represent a sensor with a name, type, and current reading.
+%
+% A `Sensor` object stores metadata about a physical sensor and its
+% most recent reading. Use the `read` method to update the stored
+% value and the `calibrate` method to apply a zero-offset correction.
+%
+% ## Examples
+%
+% ```matlab
+% s = Sensor("Thermocouple-01", "temperature", Units="C");
+% s = s.read(23.5);
+% disp(s.Value)
+% ```
+%
+% See also datetime, timetable
+```
+
+Method help follows the same conventions as standalone functions — synopsis, syntax descriptions, examples, `See also`:
+
+```matlab
+        function obj = Sensor(name, type, opts)
+        % Sensor  Create a `Sensor` object.
+        %
+        % `s = Sensor(name, type)` creates a sensor with the given name
+        % and type.
+        %
+        % `s = Sensor(name, type, Units=u)` also specifies the
+        % measurement units.
+```
+
+All the formatting from the function walkthrough applies: Markdown inline code, fenced code blocks, `## Examples` sections, `See also` links, and so on.
+
+> [Full source](SampleFiles/Sensor/Sensor_v3_help.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v3_help.html)
+
+---
+
+### Step 4: Add detailed property descriptions
+
+For properties that need more than a one-liner, add multi-line `%` comment blocks *before* each property in the `properties` block — exactly the same grammar used for detailed argument descriptions in functions:
+
+```matlab
+    properties
+        % Display name of the sensor, such as `"Thermocouple-01"`.
+        % Used as a label in plots and log output.
+        Name      (1,1) string                  % Sensor display name
+
+        % Sensor category. Specify as a string such as
+        % `"temperature"`, `"pressure"`, or `"humidity"`. The type is
+        % informational and does not affect computation.
+        Type      (1,1) string                  % Sensor category
+
+        % Most recent reading, stored as a scalar double. The value
+        % reflects the raw reading adjusted by the calibration `Offset`.
+        % Initialized to `NaN` before the first reading.
+        Value     (1,1) double      = NaN       % Most recent reading
+    end
+```
+
+The trailing `%` becomes the short description (shown in the collapsed view), and the preceding `%` block becomes the expanded detail. This keeps property documentation right next to the property definition, just like argument documentation stays next to argument definitions.
+
+> [Full source](SampleFiles/Sensor/Sensor_v4_propdoc.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v4_propdoc.html)
+
+---
+
+### Step 5: Property groups
+
+Organize properties into logical groups by splitting them across multiple `properties` blocks. Add an inline comment on the `properties` keyword to label each group:
+
+```matlab
+    properties % Sensor information
+        Name      (1,1) string                  % Sensor display name
+        Type      (1,1) string                  % Sensor category
+    end
+
+    properties % Sensor readings
+        Value     (1,1) double      = NaN       % Most recent reading
+        Units     (1,1) string      = ""        % Measurement units
+        Timestamp (1,1) datetime    = NaT       % Time of last reading
+        Offset    (1,1) double      = 0         % Calibration offset
+    end
+```
+
+The property table renders with group headings, making it easy to scan large classes with many properties. Properties with access modifiers (`SetAccess = private`, `Access = protected`, etc.) are automatically grouped by access level.
+
+> [Full source](SampleFiles/Sensor/Sensor_v6_override.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v6_override.html)
+
+---
+
+### Step 6: Override with structured sections
+
+Just as functions support `## Syntax` and `## Input Arguments` overrides, classes support a `## Properties` section in the class help block. This replaces the auto-generated property descriptions with manually authored content using the same keyed format as `## Input Arguments`:
+
+```matlab
+classdef Sensor
+% Sensor  Represent a sensor with a name, type, and current reading.
+%
+% ...
+%
+% ## Properties
+%
+% `Name` — Sensor display name
+% Display name of the sensor, such as `"Thermocouple-01"`.
+% Used as a label in plots and log output.
+%
+% `Type` — Sensor category
+% Sensor category. Specify as a string such as
+% `"temperature"`, `"pressure"`, or `"humidity"`.
+%
+% `Value` — Most recent reading
+% Most recent reading, stored as a scalar double. The value
+% reflects the raw reading adjusted by the calibration `Offset`.
+```
+
+When present, `## Properties` replaces the property descriptions from the `properties` block, giving you full control over the property documentation. Individual methods also support `## Syntax`, `## Input Arguments`, and `## Output Arguments` overrides, just like standalone functions.
+
+> [Full source](SampleFiles/Sensor/Sensor_v5_sections.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v5_sections.html)
+
+---
+
+### Events
+
+Classes with an `events` block get an Events section on the class page. Add trailing `%` comments to describe each event:
+
+```matlab
+    events
+        DataLogged       % Fires after each call to log()
+        BufferFull       % Fires when buffer reaches BufferSize
+        LoggingStarted   % Fires when start() is called
+        LoggingStopped   % Fires when stop() is called
+    end
+```
+
+Events appear in a table on the class page with their descriptions. See the `DataLogger` example for a complete handle class that uses events, inheritance, access modifiers, and all the structured sections described above.
+
+> [Full source](SampleFiles/DataLogger/DataLogger.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/DataLogger/DataLogger.html)
 
 ---
 
 ## What's Next
-- **More sample files**: [SampleFiles/](SampleFiles/) — additional examples including `weightedmean` (7 versions), `smoothts` (complex multi-method function), and `DataLogger` (handle class with events)
+- **More sample files**: [SampleFiles/](SampleFiles/) — additional examples including `weightedmean` (7 versions), `smoothts` (complex multi-method function), and `DataLogger` (handle class with events, inheritance, and access modifiers)
 - **Browse rendered output**: [GitHub Pages site](https://michellehirsch.github.io/matlab_custom_doc_prototype/) — all sample files rendered as HTML
