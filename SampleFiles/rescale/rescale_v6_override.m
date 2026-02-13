@@ -1,4 +1,4 @@
-function y = rescale(x, a, b)
+function y = rescale_v6_override(x, a, b)
 % rescale  Rescale data to a specified range.
 %
 % Linearly rescales the elements of `x` so that they span the target

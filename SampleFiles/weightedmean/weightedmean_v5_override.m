@@ -1,4 +1,4 @@
-function [m, ci] = weightedmean(x, w, dim, opts)
+function [m, ci] = weightedmean_v5_override(x, w, dim, opts)
 % weightedmean  Compute the weighted mean of an array.
 %
 % Computes the mean of the elements of an array, optionally weighted,

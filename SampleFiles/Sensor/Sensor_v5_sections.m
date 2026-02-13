@@ -1,4 +1,4 @@
-classdef Sensor
+classdef Sensor_v5_sections
 % Sensor  Represent a sensor with a name, type, and current reading.
 %
 % A `Sensor` object stores metadata about a physical sensor and its

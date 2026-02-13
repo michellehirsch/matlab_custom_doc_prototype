@@ -1,4 +1,4 @@
-function p = addgradient(ax, opts)
+function p = addgradient_v3_full(ax, opts)
 % addgradient  Add a gradient background to a plot.
 %
 % Fills the axes background with a smooth color gradient, creating a

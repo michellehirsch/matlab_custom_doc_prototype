@@ -14,7 +14,7 @@ function mdoc(name)
 % demonstrating the custom documentation framework.
 
 arguments
-    name (1,1) string
+    name (1,1) string {mustBeFile}
 end
 
 % Check if this is a ClassName.methodName request

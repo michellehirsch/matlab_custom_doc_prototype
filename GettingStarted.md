@@ -17,7 +17,7 @@ All seven versions below share the same code — only the comments change.
 A function with an `arguments` block and nothing else:
 
 ```matlab
-function y = rescale(x, a, b)
+function y = rescale_v0_bare(x, a, b)
 arguments
     x        double
     a (1,1)  double = 0
@@ -60,7 +60,7 @@ The argument table now includes short descriptions alongside the auto-generated 
 Add a standard `%` comment block after the `function` declaration — a synopsis, description, calling forms, an example, and `See also`:
 
 ```matlab
-function y = rescale(x, a, b)
+function y = rescale_v3_help(x, a, b)
 % rescale  Rescale data to a specified range.
 %
 % Y = rescale(X) rescales the elements of X to the range [0, 1]. The
@@ -250,7 +250,7 @@ We'll walk through the `Sensor` class, again building from zero comments to a fu
 A class with typed properties and `arguments` blocks, but no comments at all:
 
 ```matlab
-classdef Sensor
+classdef Sensor_v0_bare
 
     properties
         Name      (1,1) string
@@ -303,7 +303,7 @@ The property table and method argument tables now include short descriptions alo
 Add `%` comment blocks to the `classdef` and to each method. Traditional plain-text help works just as it does for functions (see [v2 source](SampleFiles/Sensor/Sensor_v2_plain.m)), but here we show the Markdown version since the function walkthrough already covered that transition. The class help block provides a synopsis and description for the class page. Each method gets its own help block and its own doc page (for public methods that are not hidden).
 
 ```matlab
-classdef Sensor
+classdef Sensor_v3_help
 % Sensor  Represent a sensor with a name, type, and current reading.
 %
 % A `Sensor` object stores metadata about a physical sensor and its
@@ -397,7 +397,7 @@ The property table renders with group headings, making it easy to scan large cla
 Just as functions support `## Syntax` and `## Input Arguments` overrides, classes support a `## Properties` section in the class help block. This replaces the auto-generated property descriptions with manually authored content using the same keyed format as `## Input Arguments`:
 
 ```matlab
-classdef Sensor
+classdef Sensor_v5_sections
 % Sensor  Represent a sensor with a name, type, and current reading.
 %
 % ...

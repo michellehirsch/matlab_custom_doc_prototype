@@ -1,4 +1,4 @@
-function y = smoothts(x, opts)
+function y = smoothts_v4_argdoc(x, opts)
 % smoothts  Smooth a time series using a moving window.
 %
 % Applies a windowed smoothing operation to the input time series `x`.

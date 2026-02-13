@@ -1,4 +1,4 @@
-function varargout = addgradient(ax,topcolor,bottomcolor)
+function varargout = addgradient_v2_markup(ax,topcolor,bottomcolor)
 %**addgradient**   Add a nice looking gradient background to a plot
 %**addgradient** adds a subtle gray gradient background to the current plot
 %`addgradient(AX)` adds the gradient to the plot in axes with handle AX.

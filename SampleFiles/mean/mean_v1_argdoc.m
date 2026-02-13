@@ -1,4 +1,4 @@
-function M = mean(A, dim, opts)
+function M = mean_v1_argdoc(A, dim, opts)
 % mean  Average or mean value.
 %
 % Computes the mean of the elements of an array along a specified

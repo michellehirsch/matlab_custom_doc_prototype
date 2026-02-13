@@ -1,4 +1,4 @@
-function y = smoothts(x, method, window)
+function y = smoothts_v1_plain(x, method, window)
 % smoothts  Smooth a time series using a moving window.
 %
 % Y = smoothts(X) smooths the time series X using a moving average with

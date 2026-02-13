@@ -1,4 +1,4 @@
-classdef Sensor
+classdef Sensor_v1_args
 
     properties
         Name      (1,1) string                  % Sensor display name
