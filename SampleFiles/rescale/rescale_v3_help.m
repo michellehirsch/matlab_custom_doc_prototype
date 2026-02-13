@@ -22,18 +22,8 @@ function y = rescale(x, a, b)
 % See also normalize, mapminmax
 
 arguments
-    % Input data, specified as a vector, matrix, or N-D array. All
-    % elements participate in determining the min and max used for
-    % scaling. If all elements of `x` are equal, the output contains
-    % `NaN` values due to division by zero; consider adding a guard if
-    % this case may arise.
     x        double              % Input data array
-
-    % Lower bound of the target range.
     a (1,1)  double = 0          % Lower bound of target range
-
-    % Upper bound of the target range. If `b < a`, the output is
-    % reversed (maximum of `x` maps to `a`).
     b (1,1)  double = 1          % Upper bound of target range
 end
 y = a + (x - min(x(:))) ./ (max(x(:)) - min(x(:))) * (b - a);
