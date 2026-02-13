@@ -35,9 +35,9 @@ The renderer auto-generates a complete doc page from the function signature and 
 
 ---
 
-### Step 2: Add argument descriptions
+### Step 2: Add argument descriptions as inline comments in arguments block
 
-Add a trailing `%` comment on each argument line:
+Add argument descriptions by adding a trailing comment on each argument line:
 
 ```matlab
 arguments
@@ -55,7 +55,7 @@ The argument table now includes short descriptions alongside the auto-generated 
 
 ---
 
-### Step 3: Add a help block
+### Step 3: Add a traditional help block
 
 Add a standard `%` comment block after the `function` declaration — a synopsis, description, calling forms, an example, and `See also`:
 
@@ -80,7 +80,10 @@ function y = rescale(x, a, b)
 % See also normalize, mapminmax
 ```
 
-This is standard MATLAB help — the same thing you'd write today. The help is just passed through as-is to populate the Description section, with one bonus that hyperlinks are automatically generated for "see also". The argument descriptions from the inline `%` comments still appear in the argument table.
+This is standard MATLAB help — the same thing you'd write today. The help is largely just passed through as-is to populate the Description section with a few niceties:
+* 2+ spaces (after `% `) of indentation is recognized as a MATLAB code block, so examples are nicely formatted.
+* hyperlinks are automatically generated for "see also".
+Note that the list of syntaxes and inputs are still automatically generated from the source code. 
 
 ![rescale v2 — traditional help block](images/rescale_v2.png)
 
@@ -88,9 +91,9 @@ This is standard MATLAB help — the same thing you'd write today. The help is j
 
 ---
 
-### Step 4: Add Markdown formatting
+### Step 4: Use Markdown formatting in help block to indicate syntax descriptions and examples
 
-Opt into richer rendering by adding Markdown to the same help text. Wrap code in backticks, use fenced code blocks for examples, and use `**bold**` for emphasis:
+The documentation generator supports standard markdown syntax for formatting. It also uses markdown to allow more explicit definition of the different parts of a documentation page, like syntax descriptions and examples. To define the behavior of a syntax, start a line with the syntax wrapped in backticks (markdown syntax for inline code). Use fenced code blocks (` ```matlab`) to define examples:
 
 ```matlab
 % `Y = rescale(X)` rescales the elements of `X` to the range [0, 1]. The
@@ -112,8 +115,7 @@ Opt into richer rendering by adding Markdown to the same help text. Wrap code in
 % ```
 ```
 
-Same content, better output — inline code is formatted, the example gets syntax highlighting, and calling forms are detected more precisely:
-
+Same content, better output — inline code is formatted, the example gets syntax highlighting, and calling forms are detected more precisely. Note that we have one less syntax in the syntax block now because the syntaxes explicitly specified in the help text overrode the automatically generated list of syntaxes. Note also that we now have hyperlinks from the syntax block to the syntax definitions.
 ![rescale v3 — Markdown formatting](images/rescale_v3.png)
 
 > [Full source](SampleFiles/rescale/rescale_v3_help.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/rescale/rescale_v3_help.html)
