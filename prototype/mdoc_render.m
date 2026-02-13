@@ -24,6 +24,32 @@ if info.Synopsis ~= ""
     parts{end+1} = sprintf('<p class="synopsis">%s</p>', inlineMd(info.Synopsis));
 end
 
+% Branch on type: class pages, method pages, or function pages
+if isfield(info, 'Type') && info.Type == "classdef"
+    parts = [parts, renderClassPage(info)];
+elseif isfield(info, 'Type') && info.Type == "method"
+    % Add class context subtitle and back-link
+    parts{end+1} = sprintf('<p class="method-subtitle"><a href="matlab:mdoc(''%s'')">%s</a> method</p>', ...
+        char(esc(info.ClassName)), char(esc(info.ClassName)));
+    parts = [parts, renderFunctionPage(info)];
+else
+    parts = [parts, renderFunctionPage(info)];
+end
+
+parts{end+1} = '</div>';
+parts{end+1} = collapseScript();
+parts{end+1} = mathScript();
+parts{end+1} = '</body></html>';
+
+html = strjoin(string(parts), newline);
+end
+
+%% ==== Page Type Renderers ====
+
+function parts = renderFunctionPage(info)
+% Render the body of a function documentation page.
+parts = {};
+
 % Syntax
 parts{end+1} = renderSyntax(info);
 
@@ -35,8 +61,6 @@ end
 argNames = collectArgNames(info);
 
 if syntaxSource == "syntax_section"
-    % Syntax descriptions come from ## Syntax entries; Description is
-    % intro prose only (rendered without <hr> syntax separators).
     hasDescriptions = false;
     if isfield(info, 'SyntaxEntries')
         for sd = 1:numel(info.SyntaxEntries)
@@ -58,10 +82,6 @@ if syntaxSource == "syntax_section"
         parts{end+1} = '</div>';
     end
 else
-    % For "description", "auto", and "legacy" sources, render the
-    % description text as-is. descriptionBlockMd adds <hr> separators
-    % before backtick-starting paragraphs, preserving the traditional
-    % calling-form-paragraph layout.
     if info.Description ~= ""
         parts{end+1} = '<h2>Description</h2>';
         parts{end+1} = '<div class="description-body">';
@@ -97,13 +117,98 @@ if ~isempty(info.OutputArgs)
 end
 
 % Remaining sections in spec order (Examples handled above)
+parts = [parts, renderRemainingSections(info)];
+end
+
+function parts = renderClassPage(info)
+% Render the body of a class documentation page.
+parts = {};
+
+% Description (simple block Markdown, no calling-form logic)
+if info.Description ~= ""
+    parts{end+1} = '<h2>Description</h2>';
+    parts{end+1} = '<div class="description-body">';
+    parts{end+1} = char(blockMd(info.Description));
+    parts{end+1} = '</div>';
+end
+
+% Creation section (from constructor)
+if isfield(info, 'Constructor') && ~isempty(info.Constructor.SyntaxEntries)
+    parts{end+1} = '<h2>Creation</h2>';
+
+    % Syntax block (built as single string to avoid extra newlines)
+    ctorArgNames = collectCtorArgNames(info.Constructor);
+    syntaxHtml = "<div class=""syntax-block""><pre>";
+    for k = 1:numel(info.Constructor.SyntaxEntries)
+        form = esc(info.Constructor.SyntaxEntries(k).Form);
+        if info.Constructor.SyntaxEntries(k).Description ~= ""
+            syntaxHtml = syntaxHtml + "<a href=""#ctor-desc-" + k + """ class=""syntax-link"">" + form + "</a>";
+        else
+            syntaxHtml = syntaxHtml + form;
+        end
+        if k < numel(info.Constructor.SyntaxEntries)
+            syntaxHtml = syntaxHtml + newline;
+        end
+    end
+    syntaxHtml = syntaxHtml + "</pre></div>";
+    parts{end+1} = char(syntaxHtml);
+
+    % Constructor description
+    if info.Constructor.Description ~= ""
+        parts{end+1} = '<div class="description-body">';
+        parts{end+1} = char(descriptionBlockMd(info.Constructor.Description, ctorArgNames));
+        parts{end+1} = '</div>';
+    end
+
+    % Constructor input arguments
+    if ~isempty(info.Constructor.InputArgs)
+        parts{end+1} = char(renderCollapsibleArgSection("Input Arguments", ...
+            "section-ctor-args", renderArguments(info.Constructor.InputArgs)));
+    end
+
+    % Constructor name-value arguments
+    if ~isempty(info.Constructor.NameValueArgs)
+        nvContent = "<p class=""nv-intro"">Specify optional pairs of arguments as <code>Name1=Value1,...,NameN=ValueN</code>.</p>" ...
+            + newline + string(renderArguments(info.Constructor.NameValueArgs));
+        parts{end+1} = char(renderCollapsibleArgSection("Name-Value Arguments", ...
+            "section-ctor-nv-args", nvContent));
+    end
+end
+
+% Properties section
+if isfield(info, 'Properties') && ~isempty(info.Properties)
+    parts{end+1} = renderPropertiesSection(info.Properties);
+end
+
+% Object Functions section
+if isfield(info, 'Methods') && ~isempty(info.Methods)
+    parts{end+1} = renderObjectFunctions(info.Methods, info.Name);
+end
+
+% Events section
+if isfield(info, 'Events') && ~isempty(info.Events)
+    parts{end+1} = renderEventsSection(info.Events);
+end
+
+% Examples and remaining sections
+examplesContent = findSectionContent(info.Sections, "Examples");
+if examplesContent ~= ""
+    parts{end+1} = renderExamples(examplesContent);
+end
+
+parts = [parts, renderRemainingSections(info)];
+end
+
+function parts = renderRemainingSections(info)
+% Render Tips, Algorithms, Version History, etc. and See Also.
+parts = {};
 sectionOrder = ["Tips", "Algorithms", "Version History", ...
     "References", "More About"];
 for s = sectionOrder
     content = findSectionContent(info.Sections, s);
     if content ~= ""
         parts{end+1} = sprintf('<h2>%s</h2>', esc(s)); %#ok<AGROW>
-        parts{end+1} = blockMd(content); %#ok<AGROW>
+        parts{end+1} = char(blockMd(content)); %#ok<AGROW>
     end
 end
 
@@ -114,17 +219,166 @@ if ~isempty(info.SeeAlso)
     for k = 1:numel(info.SeeAlso)
         name = strtrim(info.SeeAlso(k));
         links{k} = sprintf('<a href="matlab:mdoc(''%s'')">%s</a>', ...
-            esc(name), esc(name));
+            char(esc(name)), char(esc(name)));
     end
     parts{end+1} = sprintf('<p class="see-also">%s</p>', strjoin(string(links), " | "));
 end
+end
+
+function s = renderPropertiesSection(props)
+% Render the Properties section using collapsible argument-style entries.
+parts = {};
+
+% Wrap in a collapsible section with expand/collapse toggle
+parts{end+1} = '<div class="section" id="section-properties">';
+parts{end+1} = '<div class="section-header">';
+parts{end+1} = '<h2>Properties</h2>';
+parts{end+1} = '<span class="collapse-toggle" onclick="toggleAll(''section-properties'')">collapse all</span>';
+parts{end+1} = '</div>';
+
+% Check if any properties have groups
+hasGroups = any(arrayfun(@(p) p.Group ~= "", props));
+
+if hasGroups
+    currentGroup = string(missing);
+    for k = 1:numel(props)
+        p = props(k);
+        if ismissing(currentGroup) || p.Group ~= currentGroup
+            currentGroup = p.Group;
+            if currentGroup ~= ""
+                parts{end+1} = sprintf('<h3 class="prop-group-heading">%s</h3>', char(esc(currentGroup))); %#ok<AGROW>
+            end
+        end
+        parts{end+1} = renderPropertyEntry(p); %#ok<AGROW>
+    end
+else
+    for k = 1:numel(props)
+        parts{end+1} = renderPropertyEntry(props(k)); %#ok<AGROW>
+    end
+end
 
 parts{end+1} = '</div>';
-parts{end+1} = collapseScript();
-parts{end+1} = mathScript();
-parts{end+1} = '</body></html>';
+s = strjoin(string(parts), newline);
+end
 
-html = strjoin(string(parts), newline);
+function s = renderPropertyEntry(p)
+% Render a single property as a collapsible entry (like input arguments).
+parts = {};
+parts{end+1} = sprintf('<div class="arg-entry collapsible" id="prop-%s">', char(p.Name));
+
+% Heading line: <code>name</code> [badges] — short description
+heading = sprintf('<code>%s</code>', char(esc(p.Name)));
+
+% Add badges
+badges = string.empty;
+if p.ReadOnly, badges(end+1) = "read-only"; end
+if p.Dependent, badges(end+1) = "dependent"; end
+if p.Constant, badges(end+1) = "constant"; end
+if p.Abstract, badges(end+1) = "abstract"; end
+for k = 1:numel(badges)
+    heading = heading + sprintf(' <span class="prop-badge">%s</span>', char(badges(k)));
+end
+
+if p.ShortDesc ~= ""
+    heading = heading + " &mdash; " + char(inlineMd(p.ShortDesc));
+end
+parts{end+1} = sprintf('<h3 class="arg-heading collapsible-toggle" onclick="toggleItem(this.parentElement)">%s</h3>', ...
+    char(string(heading)));
+
+% Collapsible body
+parts{end+1} = '<div class="collapsible-body">';
+
+% Long description
+if isfield(p, 'LongDesc') && p.LongDesc ~= ""
+    parts{end+1} = '<div class="arg-desc">';
+    parts{end+1} = char(blockMd(p.LongDesc));
+    parts{end+1} = '</div>';
+end
+
+% Type/default metadata
+if p.Class ~= ""
+    parts{end+1} = sprintf('<p class="arg-datatypes"><code>%s</code></p>', char(esc(p.Class)));
+end
+if p.Default ~= ""
+    parts{end+1} = sprintf('<p class="arg-default">Default: <code>%s</code></p>', char(esc(p.Default)));
+end
+
+parts{end+1} = '</div>'; % end collapsible-body
+parts{end+1} = '</div>'; % end arg-entry
+s = strjoin(string(parts), newline);
+end
+
+function s = renderObjectFunctions(methods, className)
+% Render the Object Functions section with optional grouping.
+parts = {};
+parts{end+1} = '<h2>Object Functions</h2>';
+
+hasGroups = any(arrayfun(@(m) m.Group ~= "", methods));
+
+if hasGroups
+    currentGroup = string(missing);
+    for k = 1:numel(methods)
+        m = methods(k);
+        if ismissing(currentGroup) || m.Group ~= currentGroup
+            if ~ismissing(currentGroup)
+                parts{end+1} = '</tbody></table>'; %#ok<AGROW>
+            end
+            currentGroup = m.Group;
+            if currentGroup ~= ""
+                parts{end+1} = sprintf('<h3 class="method-group-heading">%s</h3>', char(esc(currentGroup))); %#ok<AGROW>
+            end
+            parts{end+1} = '<table class="method-table"><tbody>'; %#ok<AGROW>
+        end
+        parts{end+1} = renderMethodRow(m, className); %#ok<AGROW>
+    end
+    parts{end+1} = '</tbody></table>';
+else
+    parts{end+1} = '<table class="method-table"><tbody>';
+    for k = 1:numel(methods)
+        parts{end+1} = renderMethodRow(methods(k), className); %#ok<AGROW>
+    end
+    parts{end+1} = '</tbody></table>';
+end
+
+s = strjoin(string(parts), newline);
+end
+
+function s = renderMethodRow(m, className)
+% Render a single method table row with linked method name.
+if m.IsStatic
+    displayName = className + "." + m.Name;
+else
+    displayName = m.Name;
+end
+% Link to method page via mdoc (rewritten by mbuilddoc for static sites)
+linkTarget = className + "." + m.Name;
+s = sprintf('<tr><td class="method-name"><a href="matlab:mdoc(''%s'')"><code>%s</code></a></td><td class="method-desc">%s</td></tr>', ...
+    char(esc(linkTarget)), char(esc(displayName)), char(inlineMd(m.Synopsis)));
+end
+
+function s = renderEventsSection(events)
+% Render the Events section as a simple table.
+parts = {};
+parts{end+1} = '<h2>Events</h2>';
+parts{end+1} = '<table class="event-table"><tbody>';
+for k = 1:numel(events)
+    e = events(k);
+    parts{end+1} = sprintf('<tr><td class="event-name"><code>%s</code></td><td class="event-desc">%s</td></tr>', ...
+        char(esc(e.Name)), char(inlineMd(e.Description))); %#ok<AGROW>
+end
+parts{end+1} = '</tbody></table>';
+s = strjoin(string(parts), newline);
+end
+
+function argNames = collectCtorArgNames(ctorInfo)
+% Collect argument names from constructor info.
+argNames = string.empty;
+for k = 1:numel(ctorInfo.InputArgs)
+    argNames(end+1) = ctorInfo.InputArgs(k).Name; %#ok<AGROW>
+end
+for k = 1:numel(ctorInfo.NameValueArgs)
+    argNames(end+1) = ctorInfo.NameValueArgs(k).Name; %#ok<AGROW>
+end
 end
 
 %% ==== Markdown-to-HTML Engine ====
@@ -808,6 +1062,16 @@ css = [...
     '.arg-ref code { color: inherit; background: none; padding: 0; }' newline ...
     '.desc-entry { scroll-margin-top: 16px; }' newline ...
     '.arg-entry { scroll-margin-top: 16px; }' newline ...
+    '.prop-table, .method-table, .event-table { width: 100%; border-collapse: collapse; margin: 8px 0; }' newline ...
+    '.prop-table td, .method-table td, .event-table td { padding: 6px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }' newline ...
+    '.prop-name, .method-name, .event-name { white-space: nowrap; width: 1%; font-weight: 500; }' newline ...
+    '.prop-name code, .method-name code, .event-name code { background: none; padding: 0; font-weight: 600; }' newline ...
+    '.prop-desc, .method-desc, .event-desc { color: var(--text); }' newline ...
+    '.prop-meta { font-size: 0.85em; color: #777; margin-top: 2px; }' newline ...
+    '.prop-meta code { background: none; padding: 0; font-size: 0.95em; }' newline ...
+    '.prop-badge { display: inline-block; font-size: 0.75em; padding: 1px 6px; margin-left: 6px; border-radius: 3px; background: #e8f4f8; color: #0076a8; font-weight: 500; vertical-align: middle; }' newline ...
+    '.prop-group-heading, .method-group-heading { font-size: 1.05em; font-weight: 600; margin: 16px 0 4px 0; color: var(--heading-color); }' newline ...
+    '.method-subtitle { font-size: 0.95em; color: #555; margin-top: 0; margin-bottom: 12px; }' newline ...
     ];
 end
 

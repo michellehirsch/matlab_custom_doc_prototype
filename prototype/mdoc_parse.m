@@ -52,36 +52,73 @@ info.NameValueArgs = mergeArgDescriptions(parsedNVArgs, inputArgLong);
 %% Build output arguments from long-form descriptions and function signature
 info.OutputArgs = buildOutputArgs(info.OutputArgNames, outputArgLong);
 
-%% Build syntax entries (three-priority model)
-% Priority 1: ## Syntax section is the sole source
-syntaxContent = "";
-for k = 1:numel(info.Sections)
-    if info.Sections(k).Heading == "Syntax"
-        syntaxContent = string(info.Sections(k).Content);
-        break
-    end
-end
+%% Classdef-specific parsing
+if info.Type == "classdef"
+    % Parse properties, methods, events blocks
+    hasPropsSection = any(arrayfun(@(s) s.Heading == "Properties", info.Sections));
+    info.Properties = parsePropertiesBlocks(lines, hasPropsSection, info.Sections);
+    [info.Methods, constructorRange] = parseMethodsBlocks(lines, info.Name);
+    info.Events = parseEventsBlocks(lines);
 
-if syntaxContent ~= ""
-    info.SyntaxEntries = parseSyntaxSection(syntaxContent, info.Name);
-    info.SyntaxSource = "syntax_section";
-else
-    % Priority 2: Calling-form paragraphs in description
-    entries = extractCallingForms(info.Description, info.Name);
-    if ~isempty(entries)
-        info.SyntaxEntries = entries;
-        info.SyntaxSource = "description";
-    elseif ~isempty(parsedArgs) || ~isempty(parsedNVArgs)
-        % Priority 3: Auto-generate from parsed arguments
-        info.SyntaxEntries = generateAutoSyntax(info.Name, ...
-            info.OutputArgNames, parsedArgs, parsedNVArgs);
-        info.SyntaxSource = "auto";
+    % Parse constructor fully (like a function)
+    if ~isempty(constructorRange)
+        info.Constructor = parseConstructorMethod(lines, constructorRange, info.Name);
     else
-        % Legacy fallback: strip function keyword from declaration
-        display = regexprep(info.Signature{1}, '^function\s+', '');
-        info.SyntaxEntries = struct("Form", string(display), ...
-            "Description", "");
-        info.SyntaxSource = "legacy";
+        % Auto-generate minimal constructor info
+        info.Constructor = generateDefaultConstructor(info.Name, info.Properties);
+    end
+
+    % Fully parse each public method (for standalone method pages)
+    info.MethodInfos = {};
+    for mi = 1:numel(info.Methods)
+        m = info.Methods(mi);
+        if isfield(m, 'Range') && ~isempty(m.Range)
+            mInfo = parseMethodFull(lines, m.Range, m.Name, info.Name);
+            mInfo.Group = m.Group;
+            mInfo.IsStatic = m.IsStatic;
+            info.MethodInfos{end+1} = mInfo;
+        end
+    end
+
+    % Classes don't use top-level syntax entries
+    info.SyntaxEntries = struct("Form", {}, "Description", {});
+    info.SyntaxSource = "classdef";
+    info.InputArgs = struct("Name", {}, "Size", {}, "Class", {}, ...
+        "Default", {}, "Validators", {}, "ShortDesc", {}, "LongDesc", {});
+    info.NameValueArgs = info.InputArgs;
+    info.OutputArgs = struct("Name", {}, "LongDesc", {});
+else
+    %% Build syntax entries (three-priority model) — functions only
+    % Priority 1: ## Syntax section is the sole source
+    syntaxContent = "";
+    for k = 1:numel(info.Sections)
+        if info.Sections(k).Heading == "Syntax"
+            syntaxContent = string(info.Sections(k).Content);
+            break
+        end
+    end
+
+    if syntaxContent ~= ""
+        info.SyntaxEntries = parseSyntaxSection(syntaxContent, info.Name);
+        info.SyntaxSource = "syntax_section";
+    else
+        % Priority 2: Calling-form paragraphs in description
+        entries = extractCallingForms(info.Description, info.Name);
+        if ~isempty(entries)
+            info.SyntaxEntries = entries;
+            info.SyntaxSource = "description";
+        elseif ~isempty(parsedArgs) || ~isempty(parsedNVArgs)
+            % Priority 3: Auto-generate from parsed arguments
+            info.SyntaxEntries = generateAutoSyntax(info.Name, ...
+                info.OutputArgNames, parsedArgs, parsedNVArgs);
+            info.SyntaxSource = "auto";
+        else
+            % Legacy fallback: strip function keyword from declaration
+            display = regexprep(info.Signature{1}, '^function\s+', '');
+            info.SyntaxEntries = struct("Form", string(display), ...
+                "Description", "");
+            info.SyntaxSource = "legacy";
+        end
     end
 end
 
@@ -720,4 +757,711 @@ end
 if ~isempty(current)
     paragraphs(end+1) = strjoin(current, newline);
 end
+end
+
+%% ---- Classdef Parsing ----
+
+function props = parsePropertiesBlocks(lines, hasPropsSection, sections)
+% Parse all properties blocks from a classdef file.
+% Returns struct array with: Name, Size, Class, Default, ShortDesc, Group,
+% ReadOnly, Dependent, Constant, Abstract
+props = struct("Name", {}, "Size", {}, "Class", {}, "Default", {}, ...
+    "ShortDesc", {}, "LongDesc", {}, "Group", {}, "ReadOnly", {}, ...
+    "Dependent", {}, "Constant", {}, "Abstract", {});
+
+% If ## Properties section exists, use it (correctly separates short/long)
+if hasPropsSection
+    props = parsePropertiesFromSection(sections);
+end
+
+% Always parse actual property blocks for metadata, flags, and inline comments
+blockProps = parsePropertiesBlocksRaw(lines);
+
+if ~isempty(blockProps)
+    if isempty(props)
+        % No ## Properties section — use block-parsed properties directly
+        props = blockProps;
+    else
+        % Merge block metadata (Size, Class, Default, flags) into section-defined props.
+        % If section-parsed LongDesc is empty, use inline comment LongDesc.
+        for bp = 1:numel(blockProps)
+            for sp = 1:numel(props)
+                if props(sp).Name == blockProps(bp).Name
+                    props(sp).Size = blockProps(bp).Size;
+                    props(sp).Class = blockProps(bp).Class;
+                    props(sp).Default = blockProps(bp).Default;
+                    props(sp).Group = blockProps(bp).Group;
+                    props(sp).ReadOnly = blockProps(bp).ReadOnly;
+                    props(sp).Dependent = blockProps(bp).Dependent;
+                    props(sp).Constant = blockProps(bp).Constant;
+                    props(sp).Abstract = blockProps(bp).Abstract;
+                    if props(sp).LongDesc == "" && blockProps(bp).LongDesc ~= ""
+                        props(sp).LongDesc = blockProps(bp).LongDesc;
+                    end
+                    break
+                end
+            end
+        end
+    end
+end
+end
+
+function props = parsePropertiesBlocksRaw(lines)
+% Parse all properties blocks from source, capturing inline comments as LongDesc.
+% Returns struct array with full metadata for each visible property.
+props = struct("Name", {}, "Size", {}, "Class", {}, "Default", {}, ...
+    "ShortDesc", {}, "LongDesc", {}, "Group", {}, "ReadOnly", {}, ...
+    "Dependent", {}, "Constant", {}, "Abstract", {});
+
+k = 1;
+while k <= numel(lines)
+    stripped = strtrim(lines(k));
+
+    % Match properties keyword (with optional attributes and comment)
+    if startsWith(stripped, "properties") && ...
+            (stripped == "properties" || ...
+             startsWith(stripped, "properties ") || ...
+             startsWith(stripped, "properties("))
+
+        % Parse block attributes
+        attrs = parseBlockAttributes(stripped, "properties");
+
+        % Determine visibility
+        if ~isPropertyBlockVisible(attrs)
+            k = skipToEnd(lines, k);
+            continue
+        end
+
+        % Extract group heading from trailing comment
+        group = extractTrailingComment(stripped);
+
+        % Determine property flags from attributes
+        readOnly = isReadOnly(attrs);
+        dependent = hasAttribute(attrs, "Dependent");
+        constant = hasAttribute(attrs, "Constant");
+        abstract = hasAttribute(attrs, "Abstract");
+
+        % Parse property lines until 'end', accumulating preceding comments
+        k = k + 1;
+        pendingComments = string.empty;
+        while k <= numel(lines)
+            pStripped = strtrim(lines(k));
+            if pStripped == "end"
+                k = k + 1;
+                break
+            end
+            if pStripped == ""
+                % Blank line resets accumulated comments
+                pendingComments = string.empty;
+                k = k + 1;
+                continue
+            end
+            if startsWith(pStripped, "%")
+                % Accumulate comment lines (strip leading "% " or "%")
+                commentText = regexprep(pStripped, '^\%\s?', '');
+                pendingComments(end+1) = commentText; %#ok<AGROW>
+                k = k + 1;
+                continue
+            end
+
+            % Parse property line
+            prop = parseOnePropertyLine(pStripped);
+            if prop.Name ~= ""
+                prop.Group = group;
+                prop.ReadOnly = readOnly;
+                prop.Dependent = dependent;
+                prop.Constant = constant;
+                prop.Abstract = abstract;
+                % Attach accumulated preceding comments as LongDesc
+                if ~isempty(pendingComments)
+                    prop.LongDesc = strjoin(pendingComments, newline);
+                end
+                props(end+1) = prop; %#ok<AGROW>
+            end
+            pendingComments = string.empty;
+            k = k + 1;
+        end
+    else
+        k = k + 1;
+    end
+end
+end
+
+function props = parsePropertiesFromSection(sections)
+% Build property list from ## Properties section content.
+% Each property is listed as `name` — short description, followed by
+% optional continuation lines that form the long description.
+props = struct("Name", {}, "Size", {}, "Class", {}, "Default", {}, ...
+    "ShortDesc", {}, "LongDesc", {}, "Group", {}, "ReadOnly", {}, ...
+    "Dependent", {}, "Constant", {}, "Abstract", {});
+for s = 1:numel(sections)
+    if sections(s).Heading == "Properties"
+        contentLines = splitlines(string(sections(s).Content));
+        currentName = "";
+        currentShort = "";
+        currentLong = string.empty;
+
+        for j = 1:numel(contentLines)
+            tok = regexp(contentLines(j), '^\s*`(\S+?)`\s*[-\x{2014}]\s*(.*)', 'tokens');
+            if ~isempty(tok)
+                % Save previous property
+                if currentName ~= ""
+                    props(end+1) = makeEmptyProp(currentName, currentShort, ...
+                        strtrim(strjoin(currentLong, newline))); %#ok<AGROW>
+                end
+                currentName = string(tok{1}{1});
+                currentShort = strtrim(string(tok{1}{2}));
+                currentLong = string.empty;
+            elseif currentName ~= ""
+                % Continuation line for current property
+                currentLong(end+1) = contentLines(j); %#ok<AGROW>
+            end
+        end
+        % Save last property
+        if currentName ~= ""
+            props(end+1) = makeEmptyProp(currentName, currentShort, ...
+                strtrim(strjoin(currentLong, newline))); %#ok<AGROW>
+        end
+        break
+    end
+end
+end
+
+function p = makeEmptyProp(name, shortDesc, longDesc)
+% Create a property struct with minimal metadata.
+p = struct("Name", name, "Size", "", "Class", "", "Default", "", ...
+    "ShortDesc", shortDesc, "LongDesc", longDesc, "Group", "", ...
+    "ReadOnly", false, "Dependent", false, "Constant", false, "Abstract", false);
+end
+
+function prop = parseOnePropertyLine(line)
+% Parse a property declaration line: name (size) class = default  % comment
+prop = struct("Name", "", "Size", "", "Class", "", "Default", "", ...
+    "ShortDesc", "", "LongDesc", "", "Group", "", "ReadOnly", false, ...
+    "Dependent", false, "Constant", false, "Abstract", false);
+
+% Extract inline comment
+commentIdx = strfind(line, "%");
+if ~isempty(commentIdx)
+    for ci = numel(commentIdx):-1:1
+        idx = commentIdx(ci);
+        if idx == strlength(line) || extractBetween(line, idx+1, idx+1) == " "
+            prop.ShortDesc = strtrim(extractAfter(line, idx));
+            line = strtrim(extractBefore(line, idx));
+            break
+        end
+    end
+end
+
+% Extract default value
+eqIdx = strfind(line, "=");
+if ~isempty(eqIdx)
+    depth_paren = 0; depth_brace = 0; lastEq = 0;
+    chars = char(line);
+    for ci = 1:numel(chars)
+        switch chars(ci)
+            case '(', depth_paren = depth_paren + 1;
+            case ')', depth_paren = depth_paren - 1;
+            case '{', depth_brace = depth_brace + 1;
+            case '}', depth_brace = depth_brace - 1;
+            case '='
+                if depth_paren == 0 && depth_brace == 0
+                    lastEq = ci;
+                end
+        end
+    end
+    if lastEq > 0
+        prop.Default = strtrim(string(chars(lastEq+1:end)));
+        line = strtrim(string(chars(1:lastEq-1)));
+    end
+end
+
+% Extract validators {mustBe...}
+tok = regexp(line, '(\{[^}]+\})', 'tokens');
+if ~isempty(tok)
+    line = strtrim(regexprep(line, '\{[^}]+\}', ''));
+end
+
+% Extract size constraint
+tok = regexp(line, '(\([^)]+\))', 'tokens');
+if ~isempty(tok)
+    prop.Size = string(tok{1}{1});
+    line = strtrim(regexprep(line, '\([^)]+\)', '', 1));
+end
+
+% Remaining: name [class]
+parts = split(strtrim(line));
+parts = parts(parts ~= "");
+if ~isempty(parts)
+    prop.Name = parts(1);
+    if numel(parts) > 1
+        prop.Class = strjoin(parts(2:end), " ");
+    end
+end
+end
+
+function [methods, constructorRange] = parseMethodsBlocks(lines, className)
+% Parse all methods blocks. Returns method info and constructor line range.
+methods = struct("Name", {}, "Synopsis", {}, "Group", {}, "IsStatic", {}, "Range", {});
+constructorRange = []; % [startLine endLine] of constructor function
+
+k = 1;
+while k <= numel(lines)
+    stripped = strtrim(lines(k));
+
+    if startsWith(stripped, "methods") && ...
+            (stripped == "methods" || ...
+             startsWith(stripped, "methods ") || ...
+             startsWith(stripped, "methods("))
+
+        attrs = parseBlockAttributes(stripped, "methods");
+
+        if ~isMethodBlockVisible(attrs)
+            k = skipToEnd(lines, k);
+            continue
+        end
+
+        group = extractTrailingComment(stripped);
+        isStatic = hasAttribute(attrs, "Static");
+
+        % Scan for functions within this methods block
+        k = k + 1;
+        blockDepth = 1; % track nested end statements
+        while k <= numel(lines) && blockDepth > 0
+            fStripped = strtrim(lines(k));
+
+            if fStripped == "end"
+                blockDepth = blockDepth - 1;
+                if blockDepth == 0
+                    k = k + 1;
+                    break
+                end
+                k = k + 1;
+                continue
+            end
+
+            if startsWith(fStripped, "function ")
+                % Parse function name
+                funcName = extractMethodName(fStripped);
+                funcStart = k;
+
+                if funcName == className
+                    % Constructor — record its range, skip adding to methods list
+                    funcEnd = findFunctionEnd(lines, k);
+                    constructorRange = [funcStart, funcEnd];
+                    k = funcEnd + 1;
+                else
+                    % Regular method — extract synopsis and record range
+                    synopsis = extractMethodSynopsis(lines, k);
+                    funcEnd = findFunctionEnd(lines, k);
+                    methods(end+1) = struct("Name", funcName, ...
+                        "Synopsis", synopsis, "Group", group, ...
+                        "IsStatic", isStatic, ...
+                        "Range", [funcStart, funcEnd]); %#ok<AGROW>
+                    k = funcEnd + 1;
+                end
+                continue
+            end
+
+            k = k + 1;
+        end
+    else
+        k = k + 1;
+    end
+end
+end
+
+function events = parseEventsBlocks(lines)
+% Parse all events blocks.
+events = struct("Name", {}, "Description", {});
+
+k = 1;
+while k <= numel(lines)
+    stripped = strtrim(lines(k));
+
+    if startsWith(stripped, "events") && ...
+            (stripped == "events" || ...
+             startsWith(stripped, "events ") || ...
+             startsWith(stripped, "events("))
+
+        attrs = parseBlockAttributes(stripped, "events");
+        if hasAttribute(attrs, "Hidden") || ...
+                hasAttributeValue(attrs, "Access", "private") || ...
+                hasAttributeValue(attrs, "Access", "protected")
+            k = skipToEnd(lines, k);
+            continue
+        end
+
+        k = k + 1;
+        while k <= numel(lines)
+            eStripped = strtrim(lines(k));
+            if eStripped == "end"
+                k = k + 1;
+                break
+            end
+            if eStripped == "" || startsWith(eStripped, "%")
+                k = k + 1;
+                continue
+            end
+            % Parse event line: EventName  % Description
+            desc = "";
+            eLine = eStripped;
+            cIdx = strfind(eLine, "%");
+            if ~isempty(cIdx)
+                desc = strtrim(extractAfter(eLine, cIdx(1)));
+                eLine = strtrim(extractBefore(eLine, cIdx(1)));
+            end
+            eName = strtrim(eLine);
+            if eName ~= ""
+                events(end+1) = struct("Name", eName, "Description", desc); %#ok<AGROW>
+            end
+            k = k + 1;
+        end
+    else
+        k = k + 1;
+    end
+end
+end
+
+function ctorInfo = parseConstructorMethod(lines, range, className)
+% Parse constructor method fully, like a standalone function.
+% range = [startLine endLine]
+ctorLines = lines(range(1):range(2));
+
+% Extract output variable name from constructor signature
+funcLine = strtrim(ctorLines(1));
+[~, ~, outArgNames] = parseFunctionDeclaration(funcLine);
+if isempty(outArgNames)
+    outArgNames = "obj";
+end
+
+% Extract help block
+[helpLines, helpEndIdx] = extractHelpBlock(ctorLines, 1);
+
+% Parse help
+ctorInfo.Synopsis = parseSynopsis(helpLines, className);
+[ctorInfo.Description, ctorInfo.Sections, ~] = parseHelpBody(helpLines);
+
+% Extract argument descriptions from help sections
+inputArgLong = extractArgDescriptions(ctorInfo.Sections, "Input Arguments");
+
+% Parse arguments block within constructor
+[parsedArgs, parsedNVArgs] = parseArgumentsBlock(ctorLines, helpEndIdx);
+ctorInfo.InputArgs = mergeArgDescriptions(parsedArgs, inputArgLong);
+ctorInfo.NameValueArgs = mergeArgDescriptions(parsedNVArgs, inputArgLong);
+
+% Build syntax entries
+syntaxContent = "";
+for s = 1:numel(ctorInfo.Sections)
+    if ctorInfo.Sections(s).Heading == "Syntax"
+        syntaxContent = string(ctorInfo.Sections(s).Content);
+        break
+    end
+end
+
+if syntaxContent ~= ""
+    ctorInfo.SyntaxEntries = parseSyntaxSection(syntaxContent, className);
+    ctorInfo.SyntaxSource = "syntax_section";
+else
+    entries = extractCallingForms(ctorInfo.Description, className);
+    if ~isempty(entries)
+        ctorInfo.SyntaxEntries = entries;
+        ctorInfo.SyntaxSource = "description";
+    elseif ~isempty(parsedArgs) || ~isempty(parsedNVArgs)
+        ctorInfo.SyntaxEntries = generateAutoSyntax(className, ...
+            outArgNames, parsedArgs, parsedNVArgs);
+        ctorInfo.SyntaxSource = "auto";
+    else
+        ctorInfo.SyntaxEntries = struct("Form", ...
+            outArgNames(1) + " = " + className, "Description", "");
+        ctorInfo.SyntaxSource = "legacy";
+    end
+end
+end
+
+function mInfo = parseMethodFull(lines, range, methodName, className)
+% Parse a regular method fully, producing a function-like info struct.
+% range = [startLine endLine]
+mLines = lines(range(1):range(2));
+
+% Parse function declaration
+funcLine = strtrim(mLines(1));
+[~, sig, outArgNames] = parseFunctionDeclaration(funcLine);
+mInfo.Type = "method";
+mInfo.Name = string(methodName);
+mInfo.ClassName = string(className);
+mInfo.Signature = sig;
+mInfo.OutputArgNames = outArgNames;
+
+% Extract help block
+[helpLines, helpEndIdx] = extractHelpBlock(mLines, 1);
+
+% Parse help
+mInfo.Synopsis = parseSynopsis(helpLines, methodName);
+[mInfo.Description, mInfo.Sections, mInfo.SeeAlso] = parseHelpBody(helpLines);
+
+% Extract argument descriptions from help sections
+inputArgLong = extractArgDescriptions(mInfo.Sections, "Input Arguments");
+outputArgLong = extractArgDescriptions(mInfo.Sections, "Output Arguments");
+
+% Parse arguments block
+[parsedArgs, parsedNVArgs] = parseArgumentsBlock(mLines, helpEndIdx);
+mInfo.InputArgs = mergeArgDescriptions(parsedArgs, inputArgLong);
+mInfo.NameValueArgs = mergeArgDescriptions(parsedNVArgs, inputArgLong);
+mInfo.OutputArgs = buildOutputArgs(outArgNames, outputArgLong);
+
+% Build syntax entries (same three-priority model as functions)
+syntaxContent = "";
+for s = 1:numel(mInfo.Sections)
+    if mInfo.Sections(s).Heading == "Syntax"
+        syntaxContent = string(mInfo.Sections(s).Content);
+        break
+    end
+end
+
+if syntaxContent ~= ""
+    mInfo.SyntaxEntries = parseSyntaxSection(syntaxContent, methodName);
+    mInfo.SyntaxSource = "syntax_section";
+else
+    entries = extractCallingForms(mInfo.Description, methodName);
+    if ~isempty(entries)
+        mInfo.SyntaxEntries = entries;
+        mInfo.SyntaxSource = "description";
+    elseif ~isempty(parsedArgs) || ~isempty(parsedNVArgs)
+        mInfo.SyntaxEntries = generateAutoSyntax(methodName, ...
+            outArgNames, parsedArgs, parsedNVArgs);
+        mInfo.SyntaxSource = "auto";
+    else
+        display = regexprep(sig{1}, '^function\s+', '');
+        mInfo.SyntaxEntries = struct("Form", string(display), ...
+            "Description", "");
+        mInfo.SyntaxSource = "legacy";
+    end
+end
+
+mInfo.HelpLines = helpLines;
+end
+
+function ctorInfo = generateDefaultConstructor(className, props)
+% Generate minimal constructor info when no explicit constructor exists.
+ctorInfo.Synopsis = "";
+ctorInfo.Description = "";
+ctorInfo.Sections = struct("Heading", {}, "Content", {});
+ctorInfo.InputArgs = struct("Name", {}, "Size", {}, "Class", {}, ...
+    "Default", {}, "Validators", {}, "ShortDesc", {}, "LongDesc", {});
+ctorInfo.NameValueArgs = ctorInfo.InputArgs;
+
+% Check if there are public settable properties
+hasSettable = false;
+for k = 1:numel(props)
+    if ~props(k).ReadOnly && ~props(k).Constant && ~props(k).Dependent
+        hasSettable = true;
+        break
+    end
+end
+
+if hasSettable
+    ctorInfo.SyntaxEntries = struct("Form", ...
+        {"obj = " + className, "obj = " + className + "(Name=Value)"}, ...
+        "Description", {"", ""});
+else
+    ctorInfo.SyntaxEntries = struct("Form", "obj = " + className, "Description", "");
+end
+ctorInfo.SyntaxSource = "auto";
+end
+
+%% ---- Classdef Block Helpers ----
+
+function attrs = parseBlockAttributes(line, keyword)
+% Parse attributes from a block declaration like 'properties(SetAccess=private, Hidden)'
+% Returns a containers.Map of attribute name -> value (or "true" for flags)
+attrs = containers.Map;
+tok = regexp(line, [keyword '\s*\(([^)]*)\)'], 'tokens');
+if isempty(tok)
+    return
+end
+attrStr = string(tok{1}{1});
+parts = split(attrStr, ",");
+for k = 1:numel(parts)
+    part = strtrim(parts(k));
+    if contains(part, "=")
+        kv = split(part, "=");
+        attrs(char(strtrim(lower(kv(1))))) = char(strtrim(kv(2)));
+    else
+        % Flag attribute like Hidden, Dependent
+        attrs(char(strtrim(lower(part)))) = 'true';
+    end
+end
+end
+
+function visible = isPropertyBlockVisible(attrs)
+% Determine if a properties block should appear in docs (spec §5)
+visible = true;
+if attrs.isKey('access')
+    val = lower(string(attrs('access')));
+    if val == "private" || val == "protected"
+        visible = false; return
+    end
+end
+if attrs.isKey('getaccess')
+    val = lower(string(attrs('getaccess')));
+    if val == "private"
+        visible = false; return
+    end
+end
+if attrs.isKey('hidden')
+    visible = false; return
+end
+end
+
+function visible = isMethodBlockVisible(attrs)
+% Determine if a methods block should appear in docs
+visible = true;
+if attrs.isKey('access')
+    val = lower(string(attrs('access')));
+    if val == "private" || val == "protected"
+        visible = false; return
+    end
+end
+if attrs.isKey('hidden')
+    visible = false; return
+end
+end
+
+function ro = isReadOnly(attrs)
+% Check if SetAccess is private or protected
+ro = false;
+if attrs.isKey('setaccess')
+    val = lower(string(attrs('setaccess')));
+    if val == "private" || val == "protected"
+        ro = true;
+    end
+end
+end
+
+function tf = hasAttribute(attrs, name)
+% Check if attribute exists (case-insensitive)
+tf = attrs.isKey(char(lower(name)));
+end
+
+function tf = hasAttributeValue(attrs, name, value)
+% Check if attribute has a specific value
+tf = false;
+key = char(lower(name));
+if attrs.isKey(key)
+    tf = lower(string(attrs(key))) == lower(value);
+end
+end
+
+function comment = extractTrailingComment(line)
+% Extract trailing % comment from a block declaration line
+comment = "";
+idx = strfind(line, "%");
+if ~isempty(idx)
+    comment = strtrim(extractAfter(line, idx(end)));
+end
+end
+
+function endIdx = skipToEnd(lines, startIdx)
+% Skip from a block start to its matching 'end', handling nesting
+depth = 1;
+endIdx = startIdx + 1;
+while endIdx <= numel(lines)
+    s = strtrim(lines(endIdx));
+    % Count nested blocks
+    if startsWith(s, "properties") || startsWith(s, "methods") || ...
+            startsWith(s, "events") || startsWith(s, "enumeration") || ...
+            startsWith(s, "function ") || ...
+            startsWith(s, "arguments") && (s == "arguments" || startsWith(s, "arguments ") || startsWith(s, "arguments(")) || ...
+            startsWith(s, "if ") || s == "if" || ...
+            startsWith(s, "for ") || s == "for" || ...
+            startsWith(s, "while ") || s == "while" || ...
+            startsWith(s, "switch ") || startsWith(s, "try")
+        depth = depth + 1;
+    end
+    if s == "end"
+        depth = depth - 1;
+        if depth == 0
+            endIdx = endIdx + 1;
+            return
+        end
+    end
+    endIdx = endIdx + 1;
+end
+end
+
+function name = extractMethodName(funcLine)
+% Extract function name from a method declaration line
+body = extractAfter(funcLine, "function ");
+body = strtrim(body);
+if contains(body, "=")
+    parts = split(body, "=");
+    body = strtrim(parts(2));
+end
+if contains(body, "(")
+    name = strtrim(extractBefore(body, "("));
+else
+    name = strtrim(body);
+end
+end
+
+function synopsis = extractMethodSynopsis(lines, funcIdx)
+% Extract the synopsis (first help comment line) for a method
+synopsis = "";
+for k = (funcIdx + 1):numel(lines)
+    s = strtrim(lines(k));
+    if startsWith(s, "%")
+        content = extractAfter(s, "%");
+        if startsWith(content, " ")
+            content = extractAfter(content, " ");
+        end
+        % Synopsis is the description part after the function name
+        content = strtrim(content);
+        % Strip leading function name
+        words = split(content);
+        if ~isempty(words)
+            % Check if first word looks like the function name
+            firstWord = words(1);
+            remaining = strtrim(extractAfter(content, strlength(firstWord)));
+            if remaining ~= ""
+                synopsis = remaining;
+            else
+                synopsis = content;
+            end
+        end
+        return
+    elseif s == ""
+        continue
+    else
+        return % hit code, no help comment
+    end
+end
+end
+
+function endIdx = findFunctionEnd(lines, funcIdx)
+% Find the 'end' that closes a function starting at funcIdx
+depth = 1;
+endIdx = funcIdx + 1;
+while endIdx <= numel(lines)
+    s = strtrim(lines(endIdx));
+    % Track nesting of control structures, arguments blocks, and nested functions
+    if startsWith(s, "function ") || ...
+            startsWith(s, "arguments") && (s == "arguments" || startsWith(s, "arguments ") || startsWith(s, "arguments(")) || ...
+            startsWith(s, "if ") || s == "if" || ...
+            startsWith(s, "for ") || s == "for" || ...
+            startsWith(s, "while ") || s == "while" || ...
+            startsWith(s, "switch ") || ...
+            startsWith(s, "try") || ...
+            startsWith(s, "parfor ")
+        depth = depth + 1;
+    end
+    if s == "end"
+        depth = depth - 1;
+        if depth == 0
+            return
+        end
+    end
+    endIdx = endIdx + 1;
+end
+endIdx = numel(lines); % fallback
 end

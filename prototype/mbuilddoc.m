@@ -75,6 +75,20 @@ for k = 1:nEntries
     nameMap(char(names(k))) = char(htmlRels(k));
 end
 
+% Add method entries for classdef files (ClassName.method → path)
+for k = 1:nEntries
+    info = infos{k};
+    if isfield(info, 'Type') && info.Type == "classdef" && isfield(info, 'MethodInfos')
+        for mi = 1:numel(info.MethodInfos)
+            mInfo = info.MethodInfos{mi};
+            methodKey = char(info.Name + "." + mInfo.Name);
+            methodHtmlRel = regexprep(char(htmlRels(k)), '\.html$', ...
+                char("." + mInfo.Name + ".html"));
+            nameMap(methodKey) = methodHtmlRel;
+        end
+    end
+end
+
 [~, rootName] = fileparts(sourceFolder);
 
 %% 4. Render and write each page
@@ -90,6 +104,23 @@ for k = 1:nEntries
     outPath = fullfile(outputFolder, htmlRels(k));
     ensureDir(fileparts(outPath));
     writeText(outPath, html);
+
+    % Generate method pages for classdef files
+    info = infos{k};
+    if isfield(info, 'Type') && info.Type == "classdef" && isfield(info, 'MethodInfos')
+        for mi = 1:numel(info.MethodInfos)
+            mInfo = info.MethodInfos{mi};
+            methodHtml = mdoc_render(mInfo);
+            methodHtmlRel = regexprep(htmlRels(k), '\.html$', ...
+                "." + mInfo.Name + ".html");
+            methodHtml = injectBreadcrumb(methodHtml, methodHtmlRel, rootName);
+            methodHtml = rewriteCrossRefs(methodHtml, methodHtmlRel, nameMap);
+
+            methodOutPath = fullfile(outputFolder, methodHtmlRel);
+            ensureDir(fileparts(methodOutPath));
+            writeText(methodOutPath, methodHtml);
+        end
+    end
 end
 
 %% 5. Generate index pages
