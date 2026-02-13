@@ -64,31 +64,31 @@ classdef Sensor
             obj.Offset = 0;
         end
 
-        function obj = read(obj, value)
+        function s = read(s, value)
         % read  Record a new sensor reading.
         %
         % S = read(S, VALUE) stores VALUE as the current reading and
         % sets the timestamp to now.  The stored value is adjusted by
         % the calibration offset.
             arguments
-                obj
+                s                               % Sensor
                 value                           % Raw sensor reading (scalar double)
             end
-            obj.Value = value + obj.Offset;
-            obj.Timestamp = datetime("now");
+            s.Value = value + obj.Offset;
+            s.Timestamp = datetime("now");
         end
 
-        function obj = calibrate(obj, knownValue)
+        function s = calibrate(s, knownValue)
         % calibrate  Calibrate the sensor against a known reference.
         %
         % S = calibrate(S, KNOWNVALUE) calculates a zero-offset
         % correction so that future readings are adjusted to match
         % the known reference value.
-            arguments
-                obj
+            arguments 
+                s                               % Sensor
                 knownValue                      % Reference value from a calibration standard
             end
-            obj.Offset = knownValue - obj.Value;
+            s.Offset = knownValue - s.Value;
         end
 
         function obj = reset(obj)
