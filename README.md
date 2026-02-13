@@ -12,7 +12,7 @@ Any `.m` file with standard `%` help comments already works. Authors can progres
 
 - **[doc-framework-spec.md](doc-framework-spec.md)** — Functional specification for the comment grammar, rendering, and architecture
 - **[class-support-design.md](class-support-design.md)** - First pass at functional spec for classes.
-- **[prototype/](prototype/)** — Working MATLAB prototype (`mdoc`, `mdoc_parse`, `mdoc_render`, `mhelp`)
+- **[prototype/](prototype/)** — Working MATLAB prototype (`mdoc`, `mbuilddoc`)
 - **Sample files** — Example functions at progressive markup levels:
   - [addgradient/](SampleFiles/addgradient/), [rescale/](SampleFiles/rescale/), [smoothts/](SampleFiles/smoothts/) — functions
   - [Sensor/](SampleFiles/Sensor/), [DataLogger/](SampleFiles/DataLogger/) — classes
@@ -24,7 +24,6 @@ Any `.m` file with standard `%` help comments already works. Authors can progres
 ```matlab
 addpath prototype
 mdoc addgradient_v3_full   % renders rich HTML doc page
-mhelp addgradient_v3_full  % renders plain-text help with formatting stripped
 ```
 
 
