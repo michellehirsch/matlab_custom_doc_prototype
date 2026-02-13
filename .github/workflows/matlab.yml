@@ -1,7 +1,6 @@
-# This workflow was generated using the GitHub Actions Workflow Generator for MATLAB.
-# See https://matlab-actions.github.io/workflow-generator
+# Build MATLAB documentation and deploy to GitHub Pages
 
-name: MATLAB
+name: MATLAB Documentation
 
 on:
   push:
@@ -11,52 +10,57 @@ on:
   workflow_dispatch: {}
 
 env:
-  # To use a batch token in this workflow, first create an MLM_LICENSE_TOKEN secret in your repository settings.
-  # See https://github.com/matlab-actions/setup-matlab/#use-matlab-batch-licensing-token
   MLM_LICENSE_TOKEN: ${{ secrets.MLM_LICENSE_TOKEN }}
-  
+
+# Allow only one concurrent deployment to Pages
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Start virtual display server
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get install -y xvfb
           Xvfb :99 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
-      
-      # Set up MATLAB and other MathWorks products on the runner.
+
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v2
         with:
           release: latest
           cache: true
-          # Set up additional products using the products input.
-          # See https://github.com/matlab-actions/setup-matlab/#set-up-matlab
-          # products: Simulink Deep_Learning_Toolbox
 
+      - name: Build documentation
+        uses: matlab-actions/run-build@v2
+        with:
+          tasks: doc
 
-      # Publish documentation for all sample files
-      
-      # Run tests authored using the MATLAB unit testing framework or Simulink Test.
-#      - name: Run MATLAB tests
-#        uses: matlab-actions/run-tests@v2
-        # If you are not using a MATLAB project, add your source code to the path using the source-folder input.
-        # with:
-        #   source-folder: myfolderA; myfolderB
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
 
-      # Alternatively, run tasks from your buildfile.m.
-      # - name: Run MATLAB build
-      #   uses: matlab-actions/run-build@v2
-      #   with:
-      #     tasks: test
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
 
-      # Alternatively, run MATLAB scripts, functions, and statements.
-      # - name: Run MATLAB command
-      #   uses: matlab-actions/run-command@v2
-      #   with:
-      #     command: results = runtests('IncludeSubfolders',true); assertSuccess(results);
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

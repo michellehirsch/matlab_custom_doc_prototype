@@ -35,6 +35,10 @@ codegen/
 # buildtool cache folder
 .buildtool/
 
+# Generated documentation (rebuilt by CI)
+docs/
+SampleFiles/**/doc/
+
 # SimBiology backup files
 *.sbproj.backup
 *.sbproj.bak
