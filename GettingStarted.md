@@ -80,7 +80,7 @@ function y = rescale(x, a, b)
 % See also normalize, mapminmax
 ```
 
-This is standard MATLAB help — the same thing you'd write today. The renderer picks up the synopsis, recognizes calling-form paragraphs for the syntax block, and renders the `See also` line as hyperlinks. The argument descriptions from the inline `%` comments still appear in the argument table.
+This is standard MATLAB help — the same thing you'd write today. The help is just passed through as-is to populate the Description section, with one bonus that hyperlinks are automatically generated for "see also". The argument descriptions from the inline `%` comments still appear in the argument table.
 
 ![rescale v2 — traditional help block](images/rescale_v2.png)
 
