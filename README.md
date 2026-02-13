@@ -4,7 +4,7 @@ A design exploration for rendering rich HTML documentation from standard MATLAB 
 
 ## The idea
 
-Any `.m` file with standard `%` help comments already works. Authors can progressively add Markdown formatting (bold, code blocks, LaTeX math, images) to get richer output. Running `mdoc functionName` renders a styled HTML doc page that looks like official MathWorks documentation.
+Any `.m` file with standard `%` help comments already works. Authors can progressively add Markdown formatting (bold, code blocks, LaTeX math, images) to get richer output. Running `mdoc functionName` renders a styled HTML doc page that looks like official MathWorks documentation. Running `mdocbuild folderName` generates a simple doc book for all MATLAB functions and classes in a specified folder and subfolders. 
 
 ## What's here
 
@@ -14,6 +14,8 @@ Any `.m` file with standard `%` help comments already works. Authors can progres
 - **Sample files** — Example functions at progressive markup levels:
   - [addgradient/](SampleFiles/addgradient/), [rescale/](SampleFiles/rescale/), [smoothts/](SampleFiles/smoothts/) — functions
   - [Sensor/](SampleFiles/Sensor/), [DataLogger/](SampleFiles/DataLogger/) — classes
+- **Sample  Documentation** - Documentation generated from all of the sample files
+  - [Sample Documentation](https://michellehirsch.github.io/matlab_custom_doc_prototype/)
 
 ## Quick start
 
@@ -22,3 +24,5 @@ addpath prototype
 mdoc addgradient_v3_full   % renders rich HTML doc page
 mhelp addgradient_v3_full  % renders plain-text help with formatting stripped
 ```
+
+
