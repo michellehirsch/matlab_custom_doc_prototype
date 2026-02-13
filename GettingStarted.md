@@ -80,7 +80,7 @@ function y = rescale(x, a, b)
 % See also normalize, mapminmax
 ```
 
-This is standard MATLAB help — the same thing you'd write today. The help is largely just passed through as-is to populate the Description section with a few niceties:
+This is standard MATLAB help — the same thing you'd write today. The help is largely just passed through as-is to populate the Description section, but with a few niceties:
 * 2+ spaces (after `% `) of indentation is recognized as a MATLAB code block, so examples are nicely formatted.
 * hyperlinks are automatically generated for "see also".
 Note that the list of syntaxes and inputs are still automatically generated from the source code. 
@@ -115,7 +115,7 @@ The documentation generator supports standard markdown syntax for formatting. It
 % ```
 ```
 
-Same content, better output — inline code is formatted, the example gets syntax highlighting, and calling forms are detected more precisely. Note that we have one less syntax in the syntax block now because the syntaxes explicitly specified in the help text overrode the automatically generated list of syntaxes. Note also that we now have hyperlinks from the syntax block to the syntax definitions.
+Same content, better output — inline code is formatted, the example gets syntax highlighting, and calling forms are detected more precisely. Note that we have one less syntax in the syntax block now because the syntaxes explicitly specified in the help text override the automatically generated list of syntaxes. Note also that we now have hyperlinks from the syntax block to the syntax definitions.
 ![rescale v3 — Markdown formatting](images/rescale_v3.png)
 
 > [Full source](SampleFiles/rescale/rescale_v3_help.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/rescale/rescale_v3_help.html)
@@ -190,7 +190,7 @@ Use `##` headings in the help block to create recognized page sections. Each sec
 % $$y = a + \frac{x - \min(x)}{\max(x) - \min(x)} \cdot (b - a)$$
 ```
 
-`## Examples` with `###` subsections become separately titled examples. `## Algorithms` renders LaTeX math. `## Tips` renders as a styled bulleted list. The recognized section headings are: `Syntax`, `Input Arguments`, `Output Arguments`, `Examples`, `Tips`, `Algorithms`, `References`, `Version History`, and `More About`.
+`## Examples` with `###` subsections become separately titled examples. `## Algorithms` renders LaTeX math. `## Tips` renders as a styled bulleted list. The recognized section headings are: `Syntax`, `Input Arguments`, `Output Arguments`, `Examples`, `Tips`, `Algorithms`, `References`, `Version History`, and `More About`. Arbitrary section headings are also permitted; they just don't get special treatment. Manually specifying Syntax, Input Arguments, or Output Arguments in help comments overrides the automatically generated content.  
 
 ![rescale v5 — structured sections](images/rescale_v5.png)
 
@@ -223,7 +223,13 @@ By default, the Syntax block and Input Arguments section are auto-generated from
 % (maximum of `x` maps to `a`).
 ```
 
-When present, `## Syntax` replaces the auto-generated syntax block entirely, and `## Input Arguments` replaces the argument descriptions from the `arguments` block. This gives you full control over the exact calling forms and descriptions shown on the page.
+When present, `## Syntax` replaces the auto-generated syntax block entirely, and `## Input Arguments` replaces the argument descriptions from the `arguments` block. This gives you full control over the exact calling forms and descriptions shown on the page. Manually specifying arguments uses the following syntax:
+```matlab
+% `argname` — Short description.
+% Long description is contained in contiguous comment lines following the 
+% argument name.
+```
+
 
 ![rescale v6 — overriding auto-generation](images/rescale_v6.png)
 
@@ -266,7 +272,11 @@ The renderer creates a class page with a title, synopsis, property table, and me
 
 ### Full class features
 
-Add property type constraints with inline `%` descriptions, a `## Properties` section for long-form detail, constructor with name-value arguments, method `## Input Arguments` sections, and class-level `## Examples`:
+Classes leverage all of the syntax defined for functions. Help pages are generated for each method that is not hidden, protected or private. 
+
+Additionally:
+* Describe properties using the same grammar as for function arguments: inline comment in the property definition for a short description, comments on preceding lines for a long description, or override with a ## Properties section in the class help.
+* Define labeled property groups by defining properties into multiple `property` blocks. Define the group label with an inline comment in the property block definition
 
 ```matlab
 classdef Sensor
@@ -274,14 +284,6 @@ classdef Sensor
 %
 % A `Sensor` object stores metadata about a physical sensor and its
 % most recent reading.
-%
-% ## Properties
-%
-% `Name` — Display name of the sensor, such as `"Thermocouple-01"`.
-% Used as a label in plots and log output. Must be a nonempty string.
-%
-% `Type` — Sensor category. Specify as a string such as
-% `"temperature"`, `"pressure"`, or `"humidity"`.
 %
 % ## Examples
 %
@@ -291,10 +293,18 @@ classdef Sensor
 % s = Sensor("Thermocouple-01", "temperature", "C");
 % s = s.read(23.5);
 % ```
-
-    properties
+```matlab
+    properties % Sensor
+        %  Display name of the sensor, such as `"Thermocouple-01"`.
+        % Used as a label in plots and log output. Must be a nonempty string.
         Name      (1,1) string                  % Sensor display name
+
+        % Sensor category, specified as a string such as
+        % `"temperature"`, `"pressure"`, or `"humidity"`.
         Type      (1,1) string                  % Sensor category
+    end
+
+   properties  % Sensor readings 
         Value     (1,1) double      = NaN       % Most recent reading
         Units     (1,1) string      = ""        % Measurement units
         Timestamp (1,1) datetime    = NaT       % Time of last reading
@@ -311,8 +321,5 @@ Property constraints and inline `%` comments auto-generate a detailed property t
 ---
 
 ## What's Next
-
-- **Full grammar reference**: [doc-framework-spec.md](doc-framework-spec.md) — the complete specification covering all comment syntax, auto-generation rules, and rendering behavior
-- **Class-specific features**: [class-support-design.md](class-support-design.md) — events, property access groups, and the class page layout
 - **More sample files**: [SampleFiles/](SampleFiles/) — additional examples including `weightedmean` (7 versions), `smoothts` (complex multi-method function), and `DataLogger` (handle class with events)
 - **Browse rendered output**: [GitHub Pages site](https://michellehirsch.github.io/matlab_custom_doc_prototype/) — all sample files rendered as HTML
