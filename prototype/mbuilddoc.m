@@ -49,6 +49,12 @@ for k = 1:numel(mFiles)
         continue
     end
 
+    % Skip files where parsing returned an unusable name
+    if ismissing(info.Name) || strtrim(string(info.Name)) == ""
+        fprintf("  Skipped (no name): %s\n", relPath);
+        continue
+    end
+
     htmlRel = regexprep(relPath, '\.m$', '.html');
     names(end+1)    = string(info.Name);      %#ok<AGROW>
     synopses(end+1) = string(info.Synopsis);   %#ok<AGROW>
@@ -170,8 +176,8 @@ nav = sprintf( ...
     '<nav style="font-size:0.85em;color:#888;margin-bottom:12px;">%s</nav>', ...
     strjoin(string(segs), ' &gt; '));
 
-html = strrep(html, '<div class="doc-page">', ...
-    '<div class="doc-page">' + newline + string(nav));
+replacement = "<div class=""doc-page"">" + newline + string(nav);
+html = strrep(string(html), "<div class=""doc-page"">", replacement);
 end
 
 %% ================================================================

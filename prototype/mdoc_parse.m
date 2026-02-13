@@ -20,10 +20,16 @@ lines = splitlines(raw);
 %% Join continuation lines (... at end of line)
 lines = joinContinuationLines(lines);
 
-%% Find function declaration
+%% Find function or classdef declaration
 [funcLine, funcIdx] = findDeclaration(lines);
-info.Type = "function";
-[info.Name, info.Signature, info.OutputArgNames] = parseFunctionDeclaration(funcLine);
+if startsWith(strtrim(funcLine), "classdef ")
+    info.Type = "classdef";
+    [info.Name, info.Signature] = parseClassdefDeclaration(funcLine);
+    info.OutputArgNames = string.empty;
+else
+    info.Type = "function";
+    [info.Name, info.Signature, info.OutputArgNames] = parseFunctionDeclaration(funcLine);
+end
 
 %% Extract help comment block (contiguous % lines after declaration)
 [helpLines, helpEndIdx] = extractHelpBlock(lines, funcIdx);
@@ -175,6 +181,32 @@ end
 name = strtrim(name);
 
 % Build clean signature string
+signature = {char(sig)};
+end
+
+function [name, signature] = parseClassdefDeclaration(funcLine)
+% Parse: classdef ClassName
+% or:    classdef ClassName < SuperClass1 & SuperClass2
+% or:    classdef (Sealed, Abstract) ClassName < SuperClass
+sig = funcLine;
+body = extractAfter(sig, "classdef ");
+body = strtrim(body);
+
+% Strip optional attributes: (Sealed, Abstract, ...)
+if startsWith(body, "(")
+    closeIdx = strfind(body, ")");
+    if ~isempty(closeIdx)
+        body = strtrim(extractAfter(body, closeIdx(1)));
+    end
+end
+
+% Strip superclass list: ClassName < Super1 & Super2
+if contains(body, "<")
+    name = strtrim(extractBefore(body, "<"));
+else
+    name = strtrim(body);
+end
+
 signature = {char(sig)};
 end
 
