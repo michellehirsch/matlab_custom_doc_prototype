@@ -1,4 +1,4 @@
-function y = rescale_v3_help(x, a, b)
+function y = rescale(x, a, b)
 % rescale  Rescale data to a specified range.
 %
 % `Y = rescale(X)` rescales the elements of `X` to the range [0, 1]. The

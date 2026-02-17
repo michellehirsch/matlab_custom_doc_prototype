@@ -1,4 +1,4 @@
-classdef Sensor_v6_override
+classdef Sensor
 % Sensor  Represent a sensor with a name, type, and current reading.
 %
 % A `Sensor` object stores metadata about a physical sensor and its

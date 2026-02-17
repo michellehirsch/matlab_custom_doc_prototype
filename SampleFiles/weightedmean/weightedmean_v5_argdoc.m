@@ -1,4 +1,4 @@
-function [m, ci] = weightedmean_v5_argdoc(x, w, dim, opts)
+function [m, ci] = weightedmean(x, w, dim, opts)
 % weightedmean  Compute the weighted mean of an array.
 %
 % `M = weightedmean(X)` computes the arithmetic mean of the elements of

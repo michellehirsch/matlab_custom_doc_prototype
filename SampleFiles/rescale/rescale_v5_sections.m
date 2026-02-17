@@ -1,9 +1,15 @@
-function y = rescale_v5_sections(x, a, b)
+function y = rescale(x, a, b)
 % rescale  Rescale data to a specified range.
 %
-% Linearly rescales the elements of `x` so that they span the target
-% range $[a, b]$. The minimum value of `x` maps to `a` and the maximum
-% maps to `b`. Values between are linearly interpolated.
+% `Y = rescale(X)` rescales the elements of `X` to the range [0, 1]. The
+% minimum value of `X` maps to 0 and the maximum maps to 1.
+%
+% `Y = rescale(X, A, B)` rescales to the range [`A`, `B`].
+%
+% `X` can be a vector, matrix, or N-D array of type **double**.  `A` and
+% `B` are scalar double values specifying the lower and upper bounds of
+% the target range.  If omitted, `A` defaults to `0` and `B` defaults
+% to `1`.
 %
 % ## Output Arguments
 %

@@ -1,4 +1,4 @@
-function y = rescale_v1_args(x, a, b)
+function y = rescale(x, a, b)
 arguments
     x        double              % Input data array
     a (1,1)  double = 0          % Lower bound of target range

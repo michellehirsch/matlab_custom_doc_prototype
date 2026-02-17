@@ -1,4 +1,4 @@
-classdef Sensor_v0_bare
+classdef Sensor
 
     properties
         Name      (1,1) string

@@ -1,4 +1,4 @@
-function [m, ci] = weightedmean_v0_bare(x, w, dim, opts)
+function [m, ci] = weightedmean(x, w, dim, opts)
 
 arguments
     x        double

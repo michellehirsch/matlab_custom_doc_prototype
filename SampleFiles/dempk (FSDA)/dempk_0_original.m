@@ -1,4 +1,4 @@
-function out = dempk_0_original(Y, k, g, varargin)
+function out = dempk(Y, k, g, varargin)
 % dempk performs a merging of components found by tkmeans
 %
 % <a href="matlab: docsearchFS('dempk')">Link to the help function</a>

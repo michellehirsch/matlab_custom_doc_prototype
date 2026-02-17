@@ -1,4 +1,4 @@
-function y = rescale_v0_bare(x, a, b)
+function y = rescale(x, a, b)
 arguments
     x        double
     a (1,1)  double = 0

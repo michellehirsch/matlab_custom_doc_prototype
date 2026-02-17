@@ -14,7 +14,7 @@ function mdoc(name)
 % demonstrating the custom documentation framework.
 
 arguments
-    name (1,1) string {mustBeFile}
+    name (1,1) string % I used {mustBeFile} to get easy tab completion, but that requires .m extension. Fix Tab completion!
 end
 
 % Check if this is a ClassName.methodName request
@@ -32,7 +32,7 @@ if contains(name, ".") && ~isfile(name) && ~isfile(name + ".m")
     try
         info = mdoc_parse(className);
         if info.Type == "classdef"
-            generateClassPages(info);
+            generateClassPages(info, className);
             if isfile(methodPath)
                 web(char(methodPath), '-browser');
                 return
@@ -47,20 +47,25 @@ end
 % Parse the source file
 info = mdoc_parse(name);
 
+% Derive a unique file stem from the source file name so that different
+% source files for the same function (e.g. rescale_v3_help vs rescale_v5)
+% each open in their own browser tab.
+[~, fileStem] = fileparts(name);
+
 % Render to HTML
 html = mdoc_render(info);
 
 % Write to temp file and open
-outPath = fullfile(tempdir, "mdoc_" + info.Name + ".html");
+outPath = fullfile(tempdir, "mdoc_" + fileStem + ".html");
 fid = fopen(outPath, 'w', 'n', 'UTF-8');
 fwrite(fid, char(html), 'char');
 fclose(fid);
 
 % For class files, also generate method pages
 if info.Type == "classdef"
-    generateClassPages(info);
+    generateClassPages(info, fileStem);
     % Rewrite method links in class page to point to local files
-    html = rewriteMethodLinks(html, info.Name);
+    html = rewriteMethodLinks(html, fileStem);
     fid = fopen(outPath, 'w', 'n', 'UTF-8');
     fwrite(fid, char(html), 'char');
     fclose(fid);
@@ -71,7 +76,7 @@ web(char(outPath), '-browser');
 
 end
 
-function generateClassPages(info)
+function generateClassPages(info, fileStem)
 % Generate method pages for a classdef file.
 if ~isfield(info, 'MethodInfos')
     return
@@ -82,24 +87,22 @@ for k = 1:numel(info.MethodInfos)
     % Rewrite class back-link to point to local file
     methodHtml = strrep(string(methodHtml), ...
         "matlab:mdoc('" + info.Name + "')", ...
-        "mdoc_" + info.Name + ".html");
-    methodPath = fullfile(tempdir, "mdoc_" + info.Name + "." + mInfo.Name + ".html");
+        "mdoc_" + fileStem + ".html");
+    methodPath = fullfile(tempdir, "mdoc_" + fileStem + "." + mInfo.Name + ".html");
     fid = fopen(methodPath, 'w', 'n', 'UTF-8');
     fwrite(fid, char(methodHtml), 'char');
     fclose(fid);
 end
 end
 
-function html = rewriteMethodLinks(html, className)
+function html = rewriteMethodLinks(html, fileStem)
 % Rewrite matlab:mdoc('ClassName.method') links to local file paths.
 html = string(html);
 [tokens, matches] = regexp(char(html), ...
-    'matlab:mdoc\(''([^'']+)\.[^'']+''\)', 'tokens', 'match');
+    'matlab:mdoc\(''[^'']+\.([^'']+''\))', 'tokens', 'match');
 for k = 1:numel(tokens)
-    fullName = regexp(matches{k}, '''([^'']+)''', 'tokens', 'once');
-    if ~isempty(fullName)
-        html = strrep(html, string(matches{k}), ...
-            "mdoc_" + string(fullName{1}) + ".html");
-    end
+    methodName = regexprep(string(tokens{k}{1}), '''\)$', '');
+    html = strrep(html, string(matches{k}), ...
+        "mdoc_" + fileStem + "." + methodName + ".html");
 end
 end

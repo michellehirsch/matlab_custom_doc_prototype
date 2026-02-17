@@ -1,4 +1,4 @@
-function out = dempk_v2_argblock(Y, k, g, opts)
+function out = dempk(Y, k, g, opts)
 % dempk  Merge components found by tkmeans.
 %
 % Performs either a hierarchical merging of the `k` components found by

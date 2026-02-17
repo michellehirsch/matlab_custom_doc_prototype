@@ -1,12 +1,7 @@
-function y = rescale_v6_override(x, a, b)
+function y = rescale(x, a, b)
 % rescale  Rescale data to a specified range.
 %
-% Linearly rescales the elements of `x` so that they span the target
-% range $[a, b]$. The minimum value of `x` maps to `a` and the maximum
-% maps to `b`. Values between are linearly interpolated.
-%
 % ## Syntax
-%
 % `Y = rescale(X)` rescales the elements of `X` to the default range
 % [0, 1].
 %
