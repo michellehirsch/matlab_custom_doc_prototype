@@ -67,7 +67,9 @@ This table illustrates the progressive enhancement model: a bare function with a
 
 ### What Constitutes a Help Comment
 
-A **help comment block** is a contiguous block of `%`-prefixed comment lines immediately following a function or class declaration. This is consistent with existing MATLAB behavior for `help` and `doc`.
+A **help comment block** is a contiguous block of comment lines immediately following a function or class declaration. This is consistent with existing MATLAB behavior for `help` and `doc`. Two comment forms are supported:
+
+**Line-comment form** — each line begins with `%`:
 
 ```matlab
 function out = myFunc(x, opts)
@@ -77,11 +79,46 @@ function out = myFunc(x, opts)
 % Markdown formatting is supported throughout.
 ```
 
+**Block-comment form** — the block is delimited by `%{` and `%}`, with bare text inside:
+
+```matlab
+function out = myFunc(x, opts)
+%{
+myFunc  Brief one-line description of myFunc.
+
+This paragraph begins the description. It may span multiple lines.
+Markdown formatting is supported throughout.
+%}
+```
+
+Both forms produce identical rendered output from the framework. The content grammar (synopsis, sections, Markdown, `See also`, etc.) is the same — only the comment delimiters differ. A help block uses one form or the other; they cannot be mixed within a single help block.
+
+Block-comment form is especially convenient for Markdown-heavy documentation, since the body reads like a plain `.md` file with no `%` noise on every line.
+
+**`help` command compatibility.** MATLAB's built-in `help` command does not currently extract `%{...%}` blocks as help text — it only recognizes contiguous `%`-prefixed lines. Authors who use block-comment form should be aware that `help functionName` at the command line will not display their documentation. The `doc` command (which uses this framework's renderer) handles both forms. A MATLAB enhancement request has been filed to extend `help` to recognize block comments.
+
 For classes, the help comment block follows the `classdef` line. Help comments end at the first non-comment line (typically the `arguments` block or function body).
 
 ### Markdown Support
 
-Help comments support a Markdown subset for formatting. The `% ` prefix is stripped before parsing; the remainder is treated as Markdown.
+Help comments support a Markdown subset for formatting. Before Markdown parsing, the raw documentation text is extracted from the comment:
+
+- **Line-comment form**: the leading `% ` (percent-space) or `%` (percent alone, for blank lines) is stripped from each line.
+- **Block-comment form**: the `%{` and `%}` delimiter lines are discarded. The enclosed lines are then **dedented** to the column position of the opening `%{`.
+
+**Dedent rule for block comments.** When `%{` is indented (e.g., inside an `arguments` or `methods` block), authors naturally indent the body text to match the surrounding code. This layout indentation is not meaningful Markdown indentation — the parser strips leading whitespace up to the column position of `%{`. Any indentation *beyond* that column is preserved and treated as meaningful Markdown (code blocks, list continuations, etc.).
+
+| Context | `%{` column | Whitespace stripped from body lines |
+|---|---|---|
+| Help block (top-level) | 1 | None — body lines used as-is |
+| `arguments` block | 5 (4 leading spaces) | Up to 4 spaces |
+| `methods` block | 9 (8 leading spaces) | Up to 8 spaces |
+
+> **Rationale:** Without the dedent rule, all content inside an indented `%{...%}` would render as preformatted code (2+ spaces = code block). The dedent rule makes block comments "just work" at any nesting level. This mirrors Python's `textwrap.dedent()` — layout indentation is invisible; only deliberate Markdown indentation matters.
+>
+> *Alternative considered: require authors to left-align block-comment bodies regardless of surrounding code indentation. Rejected because it looks unnatural in indented contexts (`arguments`, `methods`) and fights the editor's natural indentation.*
+
+In both forms, the extracted text is then parsed identically as MFM (MATLAB Flavored Markdown).
 
 **Supported syntax:**
 
@@ -100,9 +137,9 @@ Help comments support a Markdown subset for formatting. The `% ` prefix is strip
 | `$...$` | Inline math (LaTeX) |
 | `$$...$$` | Display math (LaTeX) |
 
-**Paragraph and line-break handling:** Standard Markdown whitespace rules apply after stripping the `% ` prefix. A blank comment line (`%` alone or `% ` with only whitespace) becomes a blank line in the stripped text, which separates paragraphs. Consecutive non-blank lines within the same paragraph are joined with a space (soft wraps). This means existing plain-text help comments — which already use blank `%` lines between paragraphs — render with correct paragraph breaks and no markup required. Authors do not need to add any formatting to get proper paragraph separation; the blank lines they already write are sufficient.
+**Paragraph and line-break handling:** Standard Markdown whitespace rules apply after text extraction. In line-comment form, a blank comment line (`%` alone or `% ` with only whitespace) becomes a blank line that separates paragraphs. In block-comment form, an empty line between `%{` and `%}` serves the same role. Consecutive non-blank lines within the same paragraph are joined with a space (soft wraps). This means existing plain-text help comments — which already use blank `%` lines between paragraphs — render with correct paragraph breaks and no markup required. Authors do not need to add any formatting to get proper paragraph separation; the blank lines they already write are sufficient.
 
-**Indented code blocks:** Lines indented by two or more spaces (after stripping the `% ` prefix) are rendered as preformatted code blocks, matching the traditional MATLAB help convention where examples are written with indentation. Consecutive indented lines are grouped into a single code block. This means existing help text like:
+**Indented code blocks:** Lines indented by two or more spaces (after text extraction, including dedenting for block comments) are rendered as preformatted code blocks, matching the traditional MATLAB help convention where examples are written with indentation. Consecutive indented lines are grouped into a single code block. This means existing help text like:
 
 ```matlab
 % Example
@@ -122,9 +159,30 @@ The first line of a help comment has special significance:
 % myFunc  Brief one-line description.
 ```
 
+In block-comment form, the first line after `%{` (after dedenting) follows the same convention:
+
+```matlab
+%{
+myFunc  Brief one-line description.
+...
+%}
+```
+
 - The leading token matching the function/class name (case-insensitive) is recognized and stripped from the rendered body
 - The remainder becomes the **synopsis** — the one-line description displayed in index pages and at the top of the rendered doc page
 - This matches the existing MATLAB `help` convention and requires no change to existing files
+
+### Block-Comment Considerations
+
+**Recognition.** A `%{` block is recognized as the help comment when it is the first comment construct immediately after the function or class declaration — the same position rule as line comments. A `%{` block elsewhere in the file is an ordinary code comment.
+
+**No nesting.** MATLAB does not support nested `%{...%}` blocks. A `%{` appearing inside a block comment is treated as literal text, not as a nested delimiter. The framework inherits this behavior.
+
+**Literal `%` inside block comments.** A `%` character on a line inside `%{...%}` is literal content, not a comment delimiter. This is natural for documentation: a code example like `y = foo(x)  % returns 42` inside a block comment renders the trailing `% returns 42` as text — which is exactly what the author intends in a displayed code example.
+
+**Closing delimiter.** The `%}` that closes a block comment must appear on its own line (with optional leading whitespace). This is a MATLAB language requirement.
+
+**Mutual exclusivity.** A help block is either entirely line-comment or entirely block-comment. This is inherited from MATLAB's own parsing — there is no mixing of forms within a single help block.
 
 ---
 
@@ -300,7 +358,11 @@ The inline comment should be a single concise phrase or sentence.
 
 ### Long-Form Descriptions in the `arguments` Block
 
-For arguments requiring more explanation, a `%` comment block **immediately preceding** the argument declaration provides the long-form description. The trailing `%` comment still provides the short description.
+For arguments requiring more explanation, a comment block **immediately preceding** the argument declaration provides the long-form description. The trailing `%` comment still provides the short description.
+
+Both line-comment and block-comment forms are supported for preceding descriptions:
+
+**Line-comment form:**
 
 ```matlab
 arguments
@@ -320,6 +382,35 @@ arguments
     opts.Verbose   (1,1) logical = false     % Enable verbose output
 end
 ```
+
+**Block-comment form:**
+
+```matlab
+arguments
+    %{
+    Input signal, specified as a real or complex-valued row vector.
+    The function does not validate monotonicity.
+    %}
+    x              (1,:) double              % Input signal
+
+    %{
+    Interpolation method. Specify as one of:
+
+      - `"linear"` *(default)* — piecewise linear interpolation
+      - `"cubic"` — cubic Hermite interpolation
+      - `"spline"` — not-a-knot spline interpolation
+    %}
+    opts.Method    string = "linear"         % Interpolation method
+
+    %{
+    When `true`, prints progress messages to the command window
+    during computation.
+    %}
+    opts.Verbose   (1,1) logical = false     % Enable verbose output
+end
+```
+
+The dedent rule applies: body text is dedented to the column of the `%{` opener, so the indentation above is layout, not Markdown formatting. Trailing `%` short descriptions on argument lines remain line-comment style (they are part of the code line, not a block).
 
 The long description should **repeat/incorporate the short description** so it reads naturally as a standalone paragraph. The renderer does not merge them — each is used independently (short in summary tables, long in detail sections).
 
@@ -378,7 +469,7 @@ The renderer resolves argument documentation using the **first available** sourc
 | Priority | Source | Short description | Long description |
 |----------|--------|-------------------|-----------------|
 | 1 (highest) | `## Input Arguments` section | Text after `` `arg` — `` on same line | Remaining lines below |
-| 2 | Preceding `%` block + trailing `%` in `arguments` block | Trailing comment | Preceding block |
+| 2 | Preceding comment block + trailing `%` in `arguments` block | Trailing comment | Preceding block |
 | 3 | Trailing `%` only in `arguments` block | Trailing comment | Trailing comment (serves both) |
 | 4 | `arguments` block, no comments | — | — (type/size/default still auto-rendered) |
 | 5 (lowest) | Function declaration only | — | — (just argument name) |
@@ -503,7 +594,7 @@ These render as styled callout boxes in the HTML output. In `help` output, they 
 Follows the `classdef` line. Documents the class as a whole. Same grammar as function help.
 
 ### Property Documentation
-Identical in structure to input argument documentation:
+Identical in structure to input argument documentation. Trailing `%` comments, preceding line-comment blocks, and preceding `%{...%}` block comments all work the same way as for arguments:
 
 ```matlab
 properties
@@ -512,7 +603,7 @@ properties
 end
 ```
 
-Extended property descriptions live in a `## Properties` section in the class help block, keyed by property name. The pattern is intentionally identical to input argument documentation — properties and input arguments are the same concept in this framework.
+Extended property descriptions live in a `## Properties` section in the class help block, keyed by property name, or as preceding comment blocks in the `properties` block. The pattern is intentionally identical to input argument documentation — properties and input arguments are the same concept in this framework.
 
 ### Method Documentation
 Each method carries its own function-level help comment following the same grammar as standalone functions. The class doc page aggregates all public method documentation and generates a Methods section with links to per-method detail sections or pages.
@@ -525,11 +616,13 @@ The constructor's help comment documents the construction call form. If a class-
 ## WYSIWYG Editing Model
 
 ### File Format
-All files remain standard `.m` files. Help comments are stored as plain `%`-prefixed lines with embedded Markdown (or more precisely, MFM — MATLAB Flavored Markdown, the format underlying plain-text Live Scripts).
+All files remain standard `.m` files. Help comments are stored as either `%`-prefixed line comments or `%{...%}` block comments, with embedded Markdown (or more precisely, MFM — MATLAB Flavored Markdown, the format underlying plain-text Live Scripts). The WYSIWYG editor **preserves the author's chosen comment form** — if the author wrote `%{...%}`, the editor round-trips it as `%{...%}`.
 
-The plain-text Live Script format uses a `%[text]` line prefix as a signal meaning "interpret this line as rich text / MFM, not as a code comment." For help comments, this signal is unnecessary — the parser already knows to treat them as documentation by their position in the file. The rich editor therefore leaves help comment lines as plain `% ` lines and does not add `%[text]` tags.
+> **Rationale:** Normalizing block comments to line comments on save would silently reformat files. Authors who chose block-comment form did so intentionally. The editor respects that choice.
 
-The one exception is **embedded images**: when an image binary is encoded in a file appendix (rather than referenced by path), a tag is needed on the comment line to point to that appendix location. Images referenced by path use standard Markdown `![alt](path)` syntax and require no tag.
+The plain-text Live Script format uses a `%[text]` line prefix as a signal meaning "interpret this line as rich text / MFM, not as a code comment." For help comments, this signal is unnecessary — the parser already knows to treat them as documentation by their position in the file. The rich editor therefore leaves help comment lines in their original form and does not add `%[text]` tags.
+
+The one exception is **embedded images**: when an image binary is encoded in a file appendix (rather than referenced by path), a tag is needed on the comment line to point to that appendix location. Images referenced by path use standard Markdown `![alt](path)` syntax and require no tag. In block-comment form, the image tag appears as a bare line inside the `%{...%}` block.
 
 Note: `%%` section break syntax (used in Live Scripts and scripts) does not appear within function help comment blocks and is not part of this grammar.
 
@@ -580,34 +673,37 @@ The generated site mirrors the structure and visual style of MATLAB's official p
 
 ## Summary of Grammar Elements
 
-| Element | Syntax | Where |
+| Element | Syntax (line-comment form) | Where |
 |---|---|---|
 | Synopsis | `% FunctionName  One-line description` | First help comment line |
-| Paragraph | `% Plain text` | Help comment |
-| Bold | `% **text**` | Help comment |
-| Italic | `% _text_` | Help comment |
-| Inline code | `` % `code` `` | Help comment |
-| Code block | `% ```matlab ... ` `` ` `` ` | Help comment |
-| Heading | `% ## Heading` | Help comment |
-| Unordered list | `% - item` | Help comment |
-| Ordered list | `% 1. item` | Help comment |
-| Link | `% [text](url)` | Help comment |
-| Image (by reference) | `% ![alt](path)` | Help comment |
-| Image (embedded) | tag pointing to file appendix | Help comment (WYSIWYG inserted) |
-| Inline math | `` % $...$ `` | Help comment |
-| Display math | `% $$...$$` | Help comment |
-| Callout | `% > [!NOTE] ...` | Help comment |
+| Paragraph | `% Plain text` | Help block |
+| Bold | `% **text**` | Help block |
+| Italic | `% _text_` | Help block |
+| Inline code | `` % `code` `` | Help block |
+| Code block | `% ```matlab ... ` `` ` `` ` | Help block |
+| Heading | `% ## Heading` | Help block |
+| Unordered list | `% - item` | Help block |
+| Ordered list | `% 1. item` | Help block |
+| Link | `% [text](url)` | Help block |
+| Image (by reference) | `% ![alt](path)` | Help block |
+| Image (embedded) | tag pointing to file appendix | Help block (WYSIWYG inserted) |
+| Inline math | `` % $...$ `` | Help block |
+| Display math | `% $$...$$` | Help block |
+| Callout | `% > [!NOTE] ...` | Help block |
 | Arg short desc | Trailing `% text` on argument line | `arguments` block |
-| Input arg long desc | `` `argName` — ... `` under `## Input Arguments` | Help comment |
-| Output arg desc | `` `argName` — ... `` under `## Output Arguments` | Help comment |
-| Syntax annotation | `` % `out = f(x, Name=val)` description `` under `## Syntax` | Help comment |
-| See also | `% See also a, b, c` | Help comment |
-| Examples | `% ## Examples` + fenced code blocks | Help comment |
-| Tips | `% ## Tips` | Help comment |
-| Version history | `% ## Version History` | Help comment |
-| Algorithms | `% ## Algorithms` | Help comment |
-| References | `% ## References` | Help comment |
-| More About | `% ## More About` | Help comment |
+| Arg long desc (preceding) | `%` block or `%{...%}` before argument line | `arguments` block |
+| Input arg long desc (section) | `` `argName` — ... `` under `## Input Arguments` | Help block |
+| Output arg desc | `` `argName` — ... `` under `## Output Arguments` | Help block |
+| Syntax annotation | `` % `out = f(x, Name=val)` description `` under `## Syntax` | Help block |
+| See also | `% See also a, b, c` | Help block |
+| Examples | `% ## Examples` + fenced code blocks | Help block |
+| Tips | `% ## Tips` | Help block |
+| Version history | `% ## Version History` | Help block |
+| Algorithms | `% ## Algorithms` | Help block |
+| References | `% ## References` | Help block |
+| More About | `% ## More About` | Help block |
+
+All elements in the "Help block" column apply equally to both line-comment (`% `) and block-comment (`%{...%}`) forms. The syntax column shows line-comment form; in block-comment form the `% ` prefix is absent.
 
 ---
 

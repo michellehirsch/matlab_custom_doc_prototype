@@ -248,9 +248,54 @@ signature = {char(sig)};
 end
 
 function [helpLines, helpEndIdx] = extractHelpBlock(lines, startIdx)
-% Extract contiguous comment lines starting from startIdx+1
+% Extract contiguous comment lines starting from startIdx+1.
+% Supports both line-comment (% ...) and block-comment (%{ ... %}) forms.
 helpLines = string.empty;
 helpEndIdx = startIdx;
+
+% Find first non-blank line after declaration
+firstIdx = 0;
+for k = (startIdx + 1):numel(lines)
+    if strtrim(lines(k)) ~= ""
+        firstIdx = k;
+        break
+    end
+end
+if firstIdx == 0
+    return
+end
+
+% Check for block-comment form: %{ on its own line
+stripped = strtrim(lines(firstIdx));
+if stripped == "%{"
+    % Block-comment mode: collect bare text lines until %}
+    % Determine indent level of the %{ for dedenting
+    indentCol = find(char(lines(firstIdx)) ~= ' ', 1);
+    if isempty(indentCol)
+        indentCol = 1;
+    end
+    dedentN = indentCol - 1; % number of leading spaces to strip
+    for k = (firstIdx + 1):numel(lines)
+        closingStripped = strtrim(lines(k));
+        if closingStripped == "%}"
+            helpEndIdx = k;
+            break
+        end
+        % Dedent: strip up to dedentN leading spaces
+        raw = char(lines(k));
+        if dedentN > 0 && strlength(lines(k)) > 0
+            nSpaces = min(dedentN, find([raw ~= ' ', true], 1) - 1);
+            content = string(raw(nSpaces + 1:end));
+        else
+            content = lines(k);
+        end
+        helpLines(end+1) = content; %#ok<AGROW>
+        helpEndIdx = k;
+    end
+    return
+end
+
+% Line-comment mode: existing behavior
 for k = (startIdx + 1):numel(lines)
     stripped = strtrim(lines(k));
     if startsWith(stripped, "%")
@@ -424,7 +469,8 @@ end
 
 % Parse lines until 'end', accumulating preceding comments as LongDesc
 pendingComments = string.empty;
-for k = (argBlockStart + 1):numel(lines)
+k = argBlockStart + 1;
+while k <= numel(lines)
     stripped = strtrim(lines(k));
     if stripped == "end"
         break
@@ -432,18 +478,45 @@ for k = (argBlockStart + 1):numel(lines)
     if stripped == ""
         % Blank line resets accumulated comments
         pendingComments = string.empty;
+        k = k + 1;
+        continue
+    end
+    if stripped == "%{"
+        % Block-comment preceding description: collect until %}
+        indentCol = find(char(lines(k)) ~= ' ', 1);
+        if isempty(indentCol), indentCol = 1; end
+        dedentN = indentCol - 1;
+        k = k + 1;
+        while k <= numel(lines)
+            cs = strtrim(lines(k));
+            if cs == "%}"
+                k = k + 1;
+                break
+            end
+            raw = char(lines(k));
+            if dedentN > 0 && strlength(lines(k)) > 0
+                nSpaces = min(dedentN, find([raw ~= ' ', true], 1) - 1);
+                commentText = string(raw(nSpaces + 1:end));
+            else
+                commentText = lines(k);
+            end
+            pendingComments(end+1) = commentText; %#ok<AGROW>
+            k = k + 1;
+        end
         continue
     end
     if startsWith(stripped, "%")
         % Accumulate comment lines (strip leading "% " or "%")
         commentText = regexprep(stripped, '^\%\s?', '');
         pendingComments(end+1) = commentText; %#ok<AGROW>
+        k = k + 1;
         continue
     end
 
     arg = parseOneArgumentLine(stripped);
     if arg.Name == ""
         pendingComments = string.empty;
+        k = k + 1;
         continue
     end
 
@@ -464,6 +537,7 @@ for k = (argBlockStart + 1):numel(lines)
     else
         posArgs(end+1) = arg; %#ok<AGROW>
     end
+    k = k + 1;
 end
 end
 
@@ -854,6 +928,30 @@ while k <= numel(lines)
                 % Blank line resets accumulated comments
                 pendingComments = string.empty;
                 k = k + 1;
+                continue
+            end
+            if pStripped == "%{"
+                % Block-comment preceding description: collect until %}
+                indentCol = find(char(lines(k)) ~= ' ', 1);
+                if isempty(indentCol), indentCol = 1; end
+                dedentN = indentCol - 1;
+                k = k + 1;
+                while k <= numel(lines)
+                    cs = strtrim(lines(k));
+                    if cs == "%}"
+                        k = k + 1;
+                        break
+                    end
+                    raw = char(lines(k));
+                    if dedentN > 0 && strlength(lines(k)) > 0
+                        nSpaces = min(dedentN, find([raw ~= ' ', true], 1) - 1);
+                        commentText = string(raw(nSpaces + 1:end));
+                    else
+                        commentText = lines(k);
+                    end
+                    pendingComments(end+1) = commentText; %#ok<AGROW>
+                    k = k + 1;
+                end
                 continue
             end
             if startsWith(pStripped, "%")
@@ -1406,11 +1504,37 @@ end
 end
 
 function synopsis = extractMethodSynopsis(lines, funcIdx)
-% Extract the synopsis (first help comment line) for a method
+% Extract the synopsis (first help comment line) for a method.
+% Supports both line-comment and block-comment forms.
 synopsis = "";
 for k = (funcIdx + 1):numel(lines)
     s = strtrim(lines(k));
-    if startsWith(s, "%")
+    if s == "%{"
+        % Block-comment form: first non-blank line inside is the synopsis
+        for j = (k + 1):numel(lines)
+            js = strtrim(lines(j));
+            if js == "%}"
+                return % empty block comment
+            end
+            if js == ""
+                continue
+            end
+            content = strtrim(js);
+            % Strip leading function name
+            words = split(content);
+            if ~isempty(words)
+                firstWord = words(1);
+                remaining = strtrim(extractAfter(content, strlength(firstWord)));
+                if remaining ~= ""
+                    synopsis = remaining;
+                else
+                    synopsis = content;
+                end
+            end
+            return
+        end
+        return
+    elseif startsWith(s, "%")
         content = extractAfter(s, "%");
         if startsWith(content, " ")
             content = extractAfter(content, " ");

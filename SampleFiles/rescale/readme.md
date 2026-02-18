@@ -25,6 +25,16 @@ This is the progression used in [GettingStarted.md](../../GettingStarted.md). Ea
 - **v4 → v5**: Adding `##` section headings creates structured page sections: examples, tips, algorithms with LaTeX math.
 - **v5 → v6**: Adding `## Syntax` or `## Input Arguments` sections overrides auto-generation when you need full control.
 
+## Block-Comment Variants
+
+These files use `%{...%}` block-comment syntax instead of `%`-prefixed line comments. Each is a direct counterpart of a line-comment file above — identical help content, different comment form.
+
+| File | Line-comment counterpart | What it demonstrates |
+|------|--------------------------|---------------------|
+| `rescale_v2_plain_block.m` | `rescale_v2_plain.m` | Block-comment form: bare text, no `%` prefix. Simplest illustration. |
+| `rescale_v3_help_block.m` | `rescale_v3_help.m` | Markdown in block-comment form reads like a plain `.md` file. |
+| `rescale_v5_sections_block.m` | `rescale_v5_sections.m` | Fenced code blocks, LaTeX, and `##` sections without `%` noise. Also uses `%{...%}` for preceding argument descriptions in the `arguments` block. |
+
 ## Earlier Variants (legacy)
 
 These files predate the recommended progression and explore different combinations of features.

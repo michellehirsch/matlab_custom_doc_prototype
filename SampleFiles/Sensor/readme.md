@@ -25,6 +25,15 @@ Each step adds one concept, mirroring the [rescale](../rescale/) function progre
 - **v4 → v5**: Adding `##` section headings creates structured page sections: property docs, argument docs, examples with subsections.
 - **v5 → v6**: Adding `## Syntax` and property groups overrides auto-generation when you need full control.
 
+## Block-Comment Variants
+
+These files use `%{...%}` block-comment syntax instead of `%`-prefixed line comments. Each is a direct counterpart of a line-comment file above — identical help content, different comment form.
+
+| File | Line-comment counterpart | What it demonstrates |
+|------|--------------------------|---------------------|
+| `Sensor_v3_help_block.m` | `Sensor_v3_help.m` | Block-comment form on `classdef` help and method help blocks. Tests dedent at method nesting level (8 spaces). |
+| `Sensor_v4_propdoc_block.m` | `Sensor_v4_propdoc.m` | Also uses `%{...%}` for preceding property descriptions (8 spaces) and argument descriptions (12 spaces). Tests dedent rule at multiple nesting levels. |
+
 ## Earlier Variants (legacy)
 
 These files predate the recommended progression and explore different feature combinations.
