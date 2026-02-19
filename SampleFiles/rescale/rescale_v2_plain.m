@@ -13,7 +13,7 @@ function y = rescale(x, a, b)
 % Example
 %   x = [1 2 3 4 5];
 %   y = rescale(x)            % returns [0 0.25 0.5 0.75 1]
-%   y = rescale(x, -1, 1)    % returns [-1 -0.5 0 0.5 1]
+%   y = rescale(x, -1, 1)     % returns [-1 -0.5 0 0.5 1]
 %
 % See also normalize, mapminmax
 

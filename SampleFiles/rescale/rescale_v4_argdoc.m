@@ -36,5 +36,6 @@ arguments
     % reversed (maximum of `x` maps to `a`).
     b (1,1)  double = 1          % Upper bound of target range
 end
+
 y = a + (x - min(x(:))) ./ (max(x(:)) - min(x(:))) * (b - a);
 end
