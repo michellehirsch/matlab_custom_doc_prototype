@@ -1,0 +1,16 @@
+{
+"mdoc":
+{
+    "inputs":
+    [
+		{"name":"name", "kind":"ordered", "type":"identifier=variable,function,localfunction,package,classdef"}
+    ]
+},
+"mdoc":
+{
+    "inputs":
+    [
+		{"name":"filename", "kind":"ordered", "type":"file"}
+    ]
+}
+}

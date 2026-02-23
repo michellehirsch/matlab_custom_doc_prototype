@@ -1,5 +1,11 @@
 {
   "mcpServers": {
+    "ppt": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "office-powerpoint-mcp-server", "ppt_mcp_server"],
+      "env": {}
+    },
     "matlab": {
       "type": "stdio",
       "command": "/Users/michellehirsch/Coding/mcpserver/matlab-mcp-core-server",
