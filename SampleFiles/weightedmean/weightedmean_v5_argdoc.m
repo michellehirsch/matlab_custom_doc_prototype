@@ -13,7 +13,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % `[M, CI] = weightedmean(...)` also returns a confidence interval `CI`
 % based on the weighted standard deviation.
 %
-% ## Examples
+% ## :examples
 %
 % ### Basic weighted mean
 %
@@ -30,7 +30,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % avg = weightedmean(speeds, Method="harmonic")   % 48 km/h
 % ```
 %
-% ## Tips
+% ## :tips
 %
 % - Use `Method="harmonic"` when averaging rates or ratios (e.g., speeds
 %   or prices per unit).

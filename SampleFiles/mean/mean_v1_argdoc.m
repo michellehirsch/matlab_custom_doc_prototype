@@ -5,7 +5,7 @@ function M = mean(A, dim, opts)
 % dimension, with options for weighted averaging, output type control,
 % and missing-value handling.
 %
-% ## Syntax
+% ## :syntax
 %
 % `M = mean(A)` returns the mean along the first dimension whose size
 % does not equal 1.
@@ -16,7 +16,7 @@ function M = mean(A, dim, opts)
 %
 % `M = mean(A, dim, Weights=W)` computes a weighted mean.
 %
-% ## Output Arguments
+% ## :outputs
 %
 % `M` — Mean values, returned as a scalar, vector, matrix, or
 % multidimensional array.  The size of `M` is the same as `A` except
@@ -24,7 +24,7 @@ function M = mean(A, dim, opts)
 % a 3-by-4 matrix and `dim` is 1, then `M` is a 1-by-4 row vector of
 % column means.
 %
-% ## Examples
+% ## :examples
 %
 % ### Column means of a matrix
 %
@@ -56,7 +56,7 @@ function M = mean(A, dim, opts)
 % class(M)   % 'single'
 % ```
 %
-% ## Algorithms
+% ## :algorithms
 %
 % **Unweighted mean:**
 %
@@ -66,7 +66,7 @@ function M = mean(A, dim, opts)
 %
 % $$M_w = \frac{\sum_{i=1}^{N} w_i \, A_i}{\sum_{i=1}^{N} w_i}$$
 %
-% ## Tips
+% ## :tips
 %
 % - For integer input, the default output type is `double`.  Use
 %   `OutType="native"` to keep the result in the original integer type,

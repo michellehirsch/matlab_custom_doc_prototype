@@ -91,7 +91,7 @@ else
 end
 
 % Examples (before Input Arguments, matching MathWorks order)
-examplesContent = findSectionContent(info.Sections, "Examples");
+examplesContent = findSectionContent(info.Sections, ":examples");
 if examplesContent ~= ""
     parts{end+1} = renderExamples(examplesContent);
 end
@@ -191,7 +191,7 @@ if isfield(info, 'Events') && ~isempty(info.Events)
 end
 
 % Examples and remaining sections
-examplesContent = findSectionContent(info.Sections, "Examples");
+examplesContent = findSectionContent(info.Sections, ":examples");
 if examplesContent ~= ""
     parts{end+1} = renderExamples(examplesContent);
 end
@@ -201,13 +201,17 @@ end
 
 function parts = renderRemainingSections(info)
 % Render Tips, Algorithms, Version History, etc. and See Also.
+% Each entry is {pragma key, display label} — pragma keys match what
+% parseHelpBody stores from ## :keyword directives.
 parts = {};
-sectionOrder = ["Tips", "Algorithms", "Version History", ...
-    "References", "More About"];
-for s = sectionOrder
-    content = findSectionContent(info.Sections, s);
+sectionKeys   = [":tips",       ":algorithms", ":version-history", ...
+                 ":references", ":more-about"];
+sectionLabels = ["Tips",        "Algorithms",  "Version History",  ...
+                 "References",  "More About"];
+for i = 1:numel(sectionKeys)
+    content = findSectionContent(info.Sections, sectionKeys(i));
     if content ~= ""
-        parts{end+1} = sprintf('<h2>%s</h2>', esc(s)); %#ok<AGROW>
+        parts{end+1} = sprintf('<h2>%s</h2>', esc(sectionLabels(i))); %#ok<AGROW>
         parts{end+1} = char(blockMd(content)); %#ok<AGROW>
     end
 end

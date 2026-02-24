@@ -10,7 +10,7 @@ function out = dempk(Y, k, g, opts)
 % - If `0 < g < 1`, components with pairwise overlap above the threshold
 %   `g` ($\omega^*$) are merged (same algorithm as `overlapmap`)
 %
-% ## Syntax
+% ## :syntax
 %
 % `out = dempk(Y, k, g)` merges the `k` components found by `tkmeans`
 % into `g` groups using hierarchical clustering, or merges all component
@@ -21,7 +21,7 @@ function out = dempk(Y, k, g, opts)
 % `dempk(Y, 50, 3, Alpha=0.1, Plots="contourf")` trims 10% of the data
 % and displays filled contour plots.
 %
-% ## Output Arguments
+% ## :outputs
 %
 % `out` — Results structure with the following fields:
 %
@@ -33,7 +33,7 @@ function out = dempk(Y, k, g, opts)
 %   `TkmeansOut=true`.
 % - `Y` — Original data matrix. Present only when `Ysave=true`.
 %
-% ## Examples
+% ## :examples
 %
 % ### Hierarchical merging of simulated clusters
 %
@@ -91,7 +91,7 @@ function out = dempk(Y, k, g, opts)
 %     Linkage="weights", Plots="ellipse");
 % ```
 %
-% ## Algorithms
+% ## :algorithms
 %
 % The algorithm proceeds in two stages:
 %
@@ -111,7 +111,7 @@ function out = dempk(Y, k, g, opts)
 %   merged by selecting the pair with maximum overlap, continuing to
 %   adjacent components until no remaining pair exceeds $\omega^* = g$.
 %
-% ## References
+% ## :references
 %
 % Melnykov, V., Michael, S. (2020), Clustering Large Datasets by Merging
 % K-Means Solutions, _Journal of Classification_, Vol. 37, pp. 97-123.

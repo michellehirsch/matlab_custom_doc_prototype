@@ -1,13 +1,13 @@
 function y = rescale(x, a, b)
 % rescale  Rescale data to a specified range.
 %
-% ## Syntax
+% ## :syntax
 % `Y = rescale(X)` rescales the elements of `X` to the default range
 % [0, 1].
 %
 % `Y = rescale(X, A, B)` rescales to the range [`A`, `B`].
 %
-% ## Input Arguments
+% ## :inputs
 %
 % `x` — Input data array.
 % Input data, specified as a vector, matrix, or N-D array. All
@@ -22,13 +22,13 @@ function y = rescale(x, a, b)
 % Upper bound of the target range. If `b < a`, the output is reversed
 % (maximum of `x` maps to `a`).
 %
-% ## Output Arguments
+% ## :outputs
 %
 % `y` — Rescaled data.
 % Rescaled data, returned as an array the same size as `x` with values
 % in the range $[a, b]$.
 %
-% ## Examples
+% ## :examples
 %
 % ### Rescale to default range [0, 1]
 %
@@ -54,7 +54,7 @@ function y = rescale(x, a, b)
 % end
 % ```
 %
-% ## Tips
+% ## :tips
 %
 % - For data with outliers, consider clipping before rescaling:
 %   `x = max(min(x, upper), lower)` before calling `rescale`.
@@ -62,7 +62,7 @@ function y = rescale(x, a, b)
 %   columns or use `normalize(x, 'range')` from Statistics and
 %   Machine Learning Toolbox.
 %
-% ## Algorithms
+% ## :algorithms
 %
 % The transformation applied is:
 %

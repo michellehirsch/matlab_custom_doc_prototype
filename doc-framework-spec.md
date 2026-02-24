@@ -1,6 +1,6 @@
 # MATLAB Custom Documentation Framework — Functional Specification
 
-*Draft: 2026-02-10*
+*Draft: 2026-02-23*
 
 ---
 
@@ -37,7 +37,7 @@ This principle drives a deliberate split between what the framework generates au
 
 2. **If the author must add information, keep it close to the code.** Argument descriptions go as inline or preceding comments right next to the argument declaration in the `arguments` block. Property descriptions go next to the property declaration. This proximity makes the documentation easy to find, easy to keep in sync, and hard to forget.
 
-3. **If there is no natural code location for the information, it goes in the help comment block.** Some documentation — the synopsis, examples, tips, algorithms — has no corresponding code construct. These live in the help comment block, organized by recognized `##` section headings.
+3. **If there is no natural code location for the information, it goes in the help comment block.** Some documentation — the synopsis, examples, tips, algorithms — has no corresponding code construct. These live in the help comment block, organized by recognized `## :keyword` section directives.
 
 ### What's Automatic vs. What's Manual
 
@@ -45,18 +45,18 @@ This principle drives a deliberate split between what the framework generates au
 |---|---|---|---|
 | **Title** | Function/class name | — | — |
 | **Synopsis** | — | One-line description | First line of help comment |
-| **Syntax block** | Generated from `metafunction` / `arguments` block (calling forms only, no descriptions) | Calling forms + descriptions | Calling-form paragraphs in description text, or `## Syntax` section |
+| **Syntax block** | Generated from `metafunction` / `arguments` block (calling forms only, no descriptions) | Calling forms + descriptions | Calling-form paragraphs in description text, or `## :syntax` directive |
 | **Description** | — | Free-form prose, optionally with calling-form paragraphs | Help comment body (before any `##` heading) |
 | **Input arguments: name, type, size, default** | Extracted from `arguments` block | — | — |
-| **Input arguments: descriptions** | — | Short and/or long descriptions | Inline/preceding comments in `arguments` block, or `## Input Arguments` section |
+| **Input arguments: descriptions** | — | Short and/or long descriptions | Inline/preceding comments in `arguments` block, or `## :inputs` section |
 | **Output arguments: name, type, size** | Extracted from `arguments (Output)` block if present | — | — |
-| **Output arguments: descriptions** | — | Short and/or long descriptions | Comments in `arguments (Output)` block, or `## Output Arguments` section |
+| **Output arguments: descriptions** | — | Short and/or long descriptions | Comments in `arguments (Output)` block, or `## :outputs` section |
 | **Name-value arguments** | Name, type, size, default from `arguments` block | Descriptions | Same as input arguments |
-| **Properties** | Name, type, size, default from `properties` block | Descriptions | Inline/preceding comments in `properties` block, or `## Properties` section |
+| **Properties** | Name, type, size, default from `properties` block | Descriptions | Inline/preceding comments in `properties` block, or `## :properties` section |
 | **See also** | — | Related function names | `See also` line in help comment |
-| **Examples** | — | Code examples with narrative | `## Examples` section |
-| **Tips, Algorithms, References, etc.** | — | Prose content | Corresponding `##` sections |
-| **Version History** | — | Release history entries | `## Version History` section |
+| **Examples** | — | Code examples with narrative | `## :examples` section |
+| **Tips, Algorithms, References, etc.** | — | Prose content | Corresponding `## :keyword` sections |
+| **Version History** | — | Release history entries | `## :version-history` section |
 | **Methods (class page)** | Method list auto-aggregated from class | Per-method documentation | Each method's own help comment |
 
 This table illustrates the progressive enhancement model: a bare function with an `arguments` block already produces a page with a title, a syntax block, and a fully structured argument table (names, types, defaults). Every row in the "Author provides" column is optional — the author adds only what they want, where they want it.
@@ -186,6 +186,73 @@ myFunc  Brief one-line description.
 
 ---
 
+## Pragma Syntax
+
+### Recognized Section Directives
+
+Some `##` headings in a help comment block are **recognized directives** that trigger special parsing and rendering behavior — they create named sections whose content the framework understands structurally (argument entries, syntax entries, example subsections, etc.) and whose rendered labels are supplied by the doc system rather than taken verbatim from the source.
+
+A recognized directive uses a **`:keyword` prefix** inside the `##` heading:
+
+```matlab
+% ## :inputs
+% ## :outputs
+% ## :syntax
+% ## :examples
+```
+
+The complete set of recognized directives:
+
+| Directive | Rendered section heading |
+|---|---|
+| `## :syntax` | Syntax |
+| `## :inputs` | Input Arguments |
+| `## :outputs` | Output Arguments |
+| `## :properties` | Properties |
+| `## :examples` | Examples |
+| `## :tips` | Tips |
+| `## :algorithms` | Algorithms |
+| `## :references` | References |
+| `## :version-history` | Version History |
+| `## :more-about` | More About |
+
+Any `##` heading **without** a `:` prefix is an author-defined section. It renders with the author's exact heading text and gets no special treatment:
+
+```matlab
+% ## Learn More        ← author section, renders verbatim
+% ## Background        ← author section, renders verbatim
+% ## :examples         ← recognized directive, renders as "Examples" with special layout
+```
+
+### Why Directives, Not Headings
+
+The original design used specific English strings as recognized headings (`## Input Arguments`, `## Examples`, etc.). This was rejected for three reasons:
+
+1. **Fragility** — section names must be typed exactly right. A typo like `## Input Arguements` or wrong case silently creates a custom section instead of triggering recognition. There is no way to tell from reading the source whether a heading is "special" or not.
+
+2. **Locale problem** — English-only source syntax is awkward for non-English authors and impossible to localize. With directives, the author writes `## :inputs` in any language context; the rendered heading ("Input Arguments", "Argumentos de entrada", etc.) is supplied by the doc system based on the user's locale.
+
+3. **Not extensible** — a vocabulary of magic English strings doesn't generalize to a broader directive system. The `:keyword` prefix is the extension point: future directives beyond section headings (block-level embeds, cross-references, includes) use the same `:` prefix convention, making the system consistent and learnable.
+
+### Extensibility: Block-Level Directives
+
+The `:keyword` prefix is designed to grow into a general directive vocabulary. Section directives always appear as `## :keyword` because they create headings. Future **block-level directives** — which produce content without a heading — will use `:directive` on its own line:
+
+```markdown
+:embed mypackage.myFunc
+:embed mypackage.myFunc#examples
+```
+
+This would allow a standalone Markdown page to pull in auto-generated reference content from source files, similar to mkdocstrings' `:::` syntax. Section directives and block-level directives use the same `:` prefix, making the mental model consistent: `:keyword` always means "instruction to the doc system."
+
+> **Rationale:** Alternatives considered before settling on `## :keyword`:
+>
+> - **Magic English strings** (`## Input Arguments`): original design. Fragile, locale-specific, and not extensible. Rejected.
+> - **Lowercase no-space** (`##inputs`): exploits CommonMark's requirement for a space after `#`, so `##inputs` is not a valid Markdown heading and is unambiguously a pragma. Clever, but relies on two simultaneous subtle signals (no space AND lowercase), neither of which is visually obvious when reading source. More importantly, this trick works only in Markdown heading context — it cannot generalize to block-level directives (`:embed`, etc.) that don't involve headings at all. Rejected.
+> - **Explicit `:` prefix** (`## :inputs`): selected. The `##` is standard Markdown (always creates a heading). The `:` prefix is the directive signal — unambiguous, visually distinct from prose headings, and consistent with directive syntax conventions in reStructuredText (`:param:`), CSS pseudo-selectors, and YAML. Extends naturally to a full directive vocabulary.
+
+---
+
 ## Auto-Generated Page Sections
 
 The renderer automatically generates the following page sections from file metadata and help comments. No explicit tagging is required.
@@ -200,11 +267,11 @@ From the first help comment line (see above).
 
 The compact syntax block at the top of the page and the Description section below it are tightly coupled, mirroring the structure of MathWorks doc pages: each calling form in the syntax block has a corresponding description paragraph. The framework supports three modes for populating these, applied in priority order:
 
-**Priority 1 — `## Syntax` section (explicit full control).**
-When the author includes a `## Syntax` section in the help comment block, it is the sole source for the syntax block and syntax-description pairs. Auto-generation does not run. See `## Syntax` under **Optional Enhancement Sections** below for the grammar.
+**Priority 1 — `## :syntax` directive (explicit full control).**
+When the author includes a `## :syntax` section in the help comment block, it is the sole source for the syntax block and syntax-description pairs. Auto-generation does not run. See `## :syntax` under **Optional Enhancement Sections** below for the grammar.
 
 **Priority 2 — Calling-form paragraphs in the description text.**
-If no `## Syntax` section exists, the renderer scans the freeform description (the help text before any `##` heading) for **calling-form paragraphs** — paragraphs whose first element is a backtick-wrapped expression containing the function name and `(`. These paragraphs serve double duty:
+If no `## :syntax` directive exists, the renderer scans the freeform description (the help text before any `## :keyword` directive) for **calling-form paragraphs** — paragraphs whose first element is a backtick-wrapped expression containing the function name and `(`. These paragraphs serve double duty:
 
 - The calling form (the backtick-wrapped portion) is extracted into the compact syntax block
 - The full paragraph renders as a syntax-description pair in the Description section
@@ -233,7 +300,7 @@ Any description paragraphs that are *not* calling-form paragraphs render as intr
 The renderer extracts five calling forms for the compact syntax block and renders five syntax-description pairs in the Description section.
 
 **Priority 3 — Auto-generation from `metafunction` (zero-effort fallback).**
-If neither a `## Syntax` section nor calling-form paragraphs exist, the renderer auto-generates the syntax block from function metadata. This is the zero-effort baseline: any function with an `arguments` block gets a useful syntax section with no authoring required.
+If neither a `## :syntax` directive nor calling-form paragraphs exist, the renderer auto-generates the syntax block from function metadata. This is the zero-effort baseline: any function with an `arguments` block gets a useful syntax section with no authoring required.
 
 Auto-generation uses `metafunction` (R2026a) to introspect `Signature.Inputs` and `Signature.Outputs`, then generates calling forms following these rules:
 
@@ -256,7 +323,7 @@ ___ = weightedmean(___, Name=Value)
 [m, ci] = weightedmean(___)
 ```
 
-Auto-generated forms have no descriptions — only the compact syntax block is rendered. To add descriptions, the author graduates to Priority 2 (calling-form paragraphs) or Priority 1 (`## Syntax`).
+Auto-generated forms have no descriptions — only the compact syntax block is rendered. To add descriptions, the author graduates to Priority 2 (calling-form paragraphs) or Priority 1 (`## :syntax`).
 
 **Legacy fallback** — if the function has no `arguments` block (`Signature.HasInputValidation` is false), or if `metafunction` is unavailable, the renderer strips the `function` keyword from the declaration line.
 
@@ -272,9 +339,9 @@ This creates an all-or-nothing gap between zero effort and full manual authoring
 |---|---|---|---|
 | **Do nothing** (Priority 3) | Auto-generated from `metafunction` — correct, complete | None — syntax block only, no per-syntax descriptions | Zero |
 | **Calling-form paragraphs** (Priority 2) | Extracted from author's backtick-wrapped forms | Author writes a paragraph per form | Must write every form + description manually |
-| **`## Syntax` section** (Priority 1) | From the section | Author writes a paragraph per form | Must write every form + description manually |
+| **`## :syntax` directive** (Priority 1) | From the section | Author writes a paragraph per form | Must write every form + description manually |
 
-There is no middle ground where the author gets the auto-generated forms *and* attaches descriptions to them. The moment the author writes any calling-form paragraph or `## Syntax` entry, auto-generation turns off entirely and the author owns the full set. This is by design — partial override of an auto-generated list would be confusing and fragile — but it means the step from "free syntax block" to "syntax block with descriptions" is a significant jump in authoring effort.
+There is no middle ground where the author gets the auto-generated forms *and* attaches descriptions to them. The moment the author writes any calling-form paragraph or `## :syntax` entry, auto-generation turns off entirely and the author owns the full set. This is by design — partial override of an auto-generated list would be confusing and fragile — but it means the step from "free syntax block" to "syntax block with descriptions" is a significant jump in authoring effort.
 
 **Why this gap exists and why it's acceptable:**
 
@@ -288,7 +355,7 @@ There is no middle ground where the author gets the auto-generated forms *and* a
 
 The gap between auto-generated syntaxes (no descriptions) and fully manual syntaxes (with descriptions) could be eased by editor tooling that helps the author graduate from Priority 3 to Priority 2 or Priority 1 without starting from a blank page. Several approaches could help:
 
-**1. "Populate Syntax" code action / quick fix.** The editor detects that a function has an `arguments` block but no calling-form paragraphs or `## Syntax` section. It offers a code action (lightbulb menu or right-click) that inserts a scaffolded set of calling-form paragraphs into the help comment, pre-filled with the same forms that auto-generation would produce. The author then edits these paragraphs to add descriptions. For `weightedmean`, this would insert:
+**1. "Populate Syntax" code action / quick fix.** The editor detects that a function has an `arguments` block but no calling-form paragraphs or `## :syntax` directive. It offers a code action (lightbulb menu or right-click) that inserts a scaffolded set of calling-form paragraphs into the help comment, pre-filled with the same forms that auto-generation would produce. The author then edits these paragraphs to add descriptions. For `weightedmean`, this would insert:
 
 ```matlab
 % weightedmean  Compute the weighted mean of an array.
@@ -306,10 +373,10 @@ The gap between auto-generated syntaxes (no descriptions) and fully manual synta
 
 Each calling-form paragraph is ready for the author to append a description after the backtick-wrapped form. This eliminates the tedious work of figuring out and typing each calling form — the author's only task is writing descriptions.
 
-**2. "Populate Syntax Section" variant.** Same idea, but inserts a `## Syntax` section instead of calling-form paragraphs in the description body. Useful for authors who prefer the `## Syntax` organizational style.
+**2. "Populate Syntax Section" variant.** Same idea, but inserts a `## :syntax` section instead of calling-form paragraphs in the description body. Useful for authors who prefer the explicit directive style.
 
-**3. Staleness detection / sync warnings.** When the author has calling-form paragraphs or a `## Syntax` section, the editor compares the documented forms against what `metafunction` would generate. If the `arguments` block has changed (e.g., a new optional argument was added), the editor warns that the documented syntaxes may be out of date. This could surface as:
-- A diagnostic/warning squiggle on the `## Syntax` heading or on calling-form paragraphs that don't match current metadata
+**3. Staleness detection / sync warnings.** When the author has calling-form paragraphs or a `## :syntax` directive, the editor compares the documented forms against what `metafunction` would generate. If the `arguments` block has changed (e.g., a new optional argument was added), the editor warns that the documented syntaxes may be out of date. This could surface as:
+- A diagnostic/warning squiggle on the `## :syntax` heading or on calling-form paragraphs that don't match current metadata
 - A quick fix to insert a new calling-form paragraph for the unmatched argument
 
 **4. Live preview pane.** A side panel shows the rendered doc page as the author edits. This helps the author see what the reader will see — particularly useful for verifying that calling-form paragraphs are being detected correctly and that the syntax block looks right.
@@ -322,12 +389,12 @@ Auto-generated from the `arguments` block for inputs. Each entry includes:
 - **Size/type constraints** — from the `arguments` block
 - **Default value** — from the `arguments` block
 - **Short description** — from the inline trailing comment on the argument line (see below)
-- **Long description** — from a matching entry in a `## Input Arguments` section in the help block, if present
+- **Long description** — from a matching entry in a `## :inputs` section in the help block, if present
 
 Name-value arguments (`opts.Name` style) are rendered in a separate **Name-Value Arguments** subsection, consistent with MATLAB doc conventions.
 
 ### Output Arguments
-Short descriptions come from an `## Output Arguments` section in the help block, keyed by argument name. If an `arguments` output block is present, size/type constraints are pulled from it automatically; otherwise the description stands alone. This symmetric design means input and output arguments are documented the same way, and output arguments never require an `arguments` block to be documented.
+Short descriptions come from a `## :outputs` section in the help block, keyed by argument name. If an `arguments` output block is present, size/type constraints are pulled from it automatically; otherwise the description stands alone. This symmetric design means input and output arguments are documented the same way, and output arguments never require an `arguments` block to be documented.
 
 ### See Also
 If the help block contains a line beginning with `See also` (case-insensitive), the referenced names are rendered as hyperlinks to their respective doc pages. This matches the existing MATLAB convention requiring no new syntax.
@@ -416,9 +483,9 @@ The long description should **repeat/incorporate the short description** so it r
 
 This approach works best when descriptions are short to moderate (1–5 lines per argument). For arguments with extensive documentation (bulleted option lists, multi-paragraph explanations, math), the help-block approach below may be cleaner, since it avoids interleaving prose with type/size/validator declarations.
 
-### Long-Form Descriptions in `## Input Arguments` / `## Output Arguments`
+### Long-Form Descriptions in `## :inputs` / `## :outputs`
 
-For input arguments requiring more explanation, a `## Input Arguments` section in the help comment block provides extended descriptions, keyed by argument name wrapped in backticks (matched case-sensitively). Output arguments are documented in a `## Output Arguments` section using the same pattern. In the rendered output, argument names are displayed in **bold monospace** — the renderer adds bold styling even though the source uses only backticks.
+For input arguments requiring more explanation, a `## :inputs` section in the help comment block provides extended descriptions, keyed by argument name wrapped in backticks (matched case-sensitively). Output arguments are documented in a `## :outputs` section using the same pattern. In the rendered output, argument names are displayed in **bold monospace** — the renderer adds bold styling even though the source uses only backticks.
 
 Each entry has a **structural short/long split**: the text on the same line as `` `argName` — `` is the short description; additional lines below it form the long description (which should repeat/incorporate the short description so it reads naturally on its own).
 
@@ -427,7 +494,7 @@ Each entry has a **structural short/long split**: the text on the same line as `
 %
 % Extended description of the function...
 %
-% ## Input Arguments
+% ## :inputs
 %
 % `x` — Input signal.
 % Input signal, specified as a real or complex-valued row vector. The
@@ -442,7 +509,7 @@ Each entry has a **structural short/long split**: the text on the same line as `
 %
 % `opts.Verbose` — Enable verbose output.
 %
-% ## Output Arguments
+% ## :outputs
 %
 % `out` — Interpolated values.
 % Interpolated values, returned as a row vector the same length as
@@ -468,15 +535,15 @@ The renderer resolves argument documentation using the **first available** sourc
 
 | Priority | Source | Short description | Long description |
 |----------|--------|-------------------|-----------------|
-| 1 (highest) | `## Input Arguments` section | Text after `` `arg` — `` on same line | Remaining lines below |
+| 1 (highest) | `## :inputs` section | Text after `` `arg` — `` on same line | Remaining lines below |
 | 2 | Preceding comment block + trailing `%` in `arguments` block | Trailing comment | Preceding block |
 | 3 | Trailing `%` only in `arguments` block | Trailing comment | Trailing comment (serves both) |
 | 4 | `arguments` block, no comments | — | — (type/size/default still auto-rendered) |
 | 5 (lowest) | Function declaration only | — | — (just argument name) |
 
-**Section wins entirely.** If a `## Input Arguments` section exists in the help block, it is the sole source for **all** input argument documentation. Preceding comments and trailing comments in the `arguments` block are treated as ordinary code comments (not rendered as documentation). The same rule applies independently for `## Output Arguments` vs. `arguments (Output)` block documentation.
+**Section wins entirely.** If a `## :inputs` section exists in the help block, it is the sole source for **all** input argument documentation. Preceding comments and trailing comments in the `arguments` block are treated as ordinary code comments (not rendered as documentation). The same rule applies independently for `## :outputs` vs. `arguments (Output)` block documentation.
 
-This means you can freely mix approaches across input vs. output (e.g., arguments-block docs for inputs, `## Output Arguments` in help for outputs). But you cannot mix per-argument within the same category — all input args come from one source, all output args come from one source.
+This means you can freely mix approaches across input vs. output (e.g., arguments-block docs for inputs, `## :outputs` in help for outputs). But you cannot mix per-argument within the same category — all input args come from one source, all output args come from one source.
 
 **Rationale:** Per-argument merging across two locations would be confusing to authors and hard for tooling to surface clearly. The "section wins entirely" rule is simple to explain and implement.
 
@@ -486,16 +553,16 @@ This means you can freely mix approaches across input vs. output (e.g., argument
 
 ## Optional Enhancement Sections
 
-Beyond auto-generated sections, authors can include the following recognized `##` section headings. The renderer applies distinct formatting to each.
+Beyond auto-generated sections, authors can include the following recognized `## :keyword` directives. The renderer applies distinct formatting to each.
 
-### `## Syntax` (explicit full control)
+### `## :syntax` (explicit full control)
 
-When an author includes a `## Syntax` section, it becomes the **sole source** for the compact syntax block and syntax-description pairs. Auto-generation does not run. This gives the author complete control over which calling forms appear and in what order.
+When an author includes a `## :syntax` section, it becomes the **sole source** for the compact syntax block and syntax-description pairs. Auto-generation does not run. This gives the author complete control over which calling forms appear and in what order.
 
-The grammar inside `## Syntax` uses the same calling-form paragraph pattern as the description text: each paragraph starts with a backtick-wrapped calling form, followed by a description. Forms without descriptions are also supported via fenced code blocks.
+The grammar inside `## :syntax` uses the same calling-form paragraph pattern as the description text: each paragraph starts with a backtick-wrapped calling form, followed by a description. Forms without descriptions are also supported via fenced code blocks.
 
 ```matlab
-% ## Syntax
+% ## :syntax
 %
 % `m = weightedmean(x)` computes the arithmetic mean of the elements of
 % `x`, using uniform weights.
@@ -517,22 +584,22 @@ The grammar inside `## Syntax` uses the same calling-form paragraph pattern as t
 
 The renderer extracts calling forms for the compact syntax block and renders the descriptions as syntax-description pairs, matching the MathWorks Description section layout.
 
-When `## Syntax` is present, the freeform description text (before any `##` heading) renders as introductory prose only — calling-form paragraphs in it are not extracted.
+When `## :syntax` is present, the freeform description text (before any `## :keyword` directive) renders as introductory prose only — calling-form paragraphs in it are not extracted.
 
-**When to use `## Syntax` vs. description calling forms:** Both produce the same rendered output. `## Syntax` is useful when the author wants a clean separation between syntax documentation and introductory prose, or when migrating from a legacy help block that mixes calling forms with argument descriptions in the freeform text. Description calling forms are the more natural choice when writing new help text from scratch, since they follow the traditional MATLAB help convention.
+**When to use `## :syntax` vs. description calling forms:** Both produce the same rendered output. `## :syntax` is useful when the author wants a clean separation between syntax documentation and introductory prose, or when migrating from a legacy help block that mixes calling forms with argument descriptions in the freeform text. Description calling forms are the more natural choice when writing new help text from scratch, since they follow the traditional MATLAB help convention.
 
-**Rationale:** Most authors will use calling-form paragraphs in the description text (Priority 2), since it matches how MATLAB help has always been written. `## Syntax` exists as an explicit-control option for authors who prefer structured sections, or when the description text serves a different purpose (e.g., conceptual overview rather than per-syntax explanations).
+**Rationale:** Most authors will use calling-form paragraphs in the description text (Priority 2), since it matches how MATLAB help has always been written. `## :syntax` exists as an explicit-control option for authors who prefer structured sections, or when the description text serves a different purpose (e.g., conceptual overview rather than per-syntax explanations).
 
-*Alternative considered: additive model (writing `## Syntax` supplements auto-generated forms). Rejected because it created confusion — the author couldn't see or control the full set of forms, and couldn't attach descriptions to auto-generated entries.*
+*Alternative considered: additive model (writing `## :syntax` supplements auto-generated forms). Rejected because it created confusion — the author couldn't see or control the full set of forms, and couldn't attach descriptions to auto-generated entries.*
 
-### `## Input Arguments` / `## Output Arguments`
+### `## :inputs` / `## :outputs`
 Long-form argument descriptions (see above).
 
-### `## Examples`
+### `## :examples`
 Code examples. Use fenced code blocks for MATLAB code:
 
 ````markdown
-## Examples
+## :examples
 
 ### Interpolate a sine wave
 
@@ -547,25 +614,25 @@ plot(xi, yi)
 
 The renderer adds syntax highlighting and a Copy button. Multiple `###` subsections become separately titled examples, matching MATLAB's doc page layout.
 
-### `## Tips`
+### `## :tips`
 Guidance, best practices, and performance notes. Renders as a styled prose or bulleted section.
 
-### `## Version History`
+### `## :version-history`
 ```markdown
-## Version History
+## :version-history
 
 **Introduced in R2024b**
 
 **R2025a** — Added `"spline"` option for `Method`.
 ```
 
-### `## Algorithms`
+### `## :algorithms`
 Implementation notes for technically inclined users.
 
-### `## References`
+### `## :references`
 Citations and links to external sources.
 
-### `## More About`
+### `## :more-about`
 Links to conceptual documentation or related topics. Cross-links to other pages in the generated docbook.
 
 ### Callout Blocks
@@ -603,7 +670,7 @@ properties
 end
 ```
 
-Extended property descriptions live in a `## Properties` section in the class help block, keyed by property name, or as preceding comment blocks in the `properties` block. The pattern is intentionally identical to input argument documentation — properties and input arguments are the same concept in this framework.
+Extended property descriptions live in a `## :properties` section in the class help block, keyed by property name, or as preceding comment blocks in the `properties` block. The pattern is intentionally identical to input argument documentation — properties and input arguments are the same concept in this framework.
 
 ### Method Documentation
 Each method carries its own function-level help comment following the same grammar as standalone functions. The class doc page aggregates all public method documentation and generates a Methods section with links to per-method detail sections or pages.
@@ -692,16 +759,16 @@ The generated site mirrors the structure and visual style of MATLAB's official p
 | Callout | `% > [!NOTE] ...` | Help block |
 | Arg short desc | Trailing `% text` on argument line | `arguments` block |
 | Arg long desc (preceding) | `%` block or `%{...%}` before argument line | `arguments` block |
-| Input arg long desc (section) | `` `argName` — ... `` under `## Input Arguments` | Help block |
-| Output arg desc | `` `argName` — ... `` under `## Output Arguments` | Help block |
-| Syntax annotation | `` % `out = f(x, Name=val)` description `` under `## Syntax` | Help block |
+| Input arg long desc (section) | `` `argName` — ... `` under `## :inputs` | Help block |
+| Output arg desc | `` `argName` — ... `` under `## :outputs` | Help block |
+| Syntax annotation | `` % `out = f(x, Name=val)` description `` under `## :syntax` | Help block |
 | See also | `% See also a, b, c` | Help block |
-| Examples | `% ## Examples` + fenced code blocks | Help block |
-| Tips | `% ## Tips` | Help block |
-| Version history | `% ## Version History` | Help block |
-| Algorithms | `% ## Algorithms` | Help block |
-| References | `% ## References` | Help block |
-| More About | `% ## More About` | Help block |
+| Examples | `% ## :examples` + fenced code blocks | Help block |
+| Tips | `% ## :tips` | Help block |
+| Version history | `% ## :version-history` | Help block |
+| Algorithms | `% ## :algorithms` | Help block |
+| References | `% ## :references` | Help block |
+| More About | `% ## :more-about` | Help block |
 
 All elements in the "Help block" column apply equally to both line-comment (`% `) and block-comment (`%{...%}`) forms. The syntax column shows line-comment form; in block-comment form the `% ` prefix is absent.
 
@@ -710,7 +777,7 @@ All elements in the "Help block" column apply equally to both line-comment (`% `
 ## Open Questions
 
 1. **Callout syntax**: finalize the admonition syntax (`> [!NOTE]` vs. a custom prefix)
-2. ~~**`## Syntax` override**: define the exact format for hand-authored syntax entries~~ — **Resolved**: see `## Syntax` (annotate/extend) under Optional Enhancement Sections. The section supports fenced code blocks (forms only) and inline-code paragraphs (forms with descriptions).
+2. ~~**`## :syntax` override**: define the exact format for hand-authored syntax entries~~ — **Resolved**: see `## :syntax` under Optional Enhancement Sections. The directive supports fenced code blocks (forms only) and inline-code paragraphs (forms with descriptions).
 3. **Docbook configuration**: determine minimum configuration surface (site name? include/exclude patterns?)
 4. **`help` stripping behavior**: specify exactly which Markdown constructs are stripped vs. passed through in `help` output
 

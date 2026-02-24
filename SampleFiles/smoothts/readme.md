@@ -7,13 +7,13 @@ A time series smoother with multiple call forms and name-value options. This exa
 | File | Key features exercised |
 |------|----------------------|
 | `smoothts_v1_plain.m` | Traditional help documenting multiple call forms in prose. No `arguments` block. Positional API (`method`, `window` as positional args). Shows how conventional help handles a complex function. |
-| `smoothts_v3_full.m` | The full grammar: `## Syntax` override (multiple call forms), `## Input Arguments` with NV-pair long descriptions (enumerated options with defaults), `## Output Arguments`, multiple `## Examples`, `## Algorithms` (math-heavy with LaTeX), `## Tips` with `> [!NOTE]` callout, `## References`, `See also`. Redesigned API uses name-value pairs via `arguments` block. |
+| `smoothts_v3_full.m` | The full grammar: `## :syntax` override (multiple call forms), `## :inputs` with NV-pair long descriptions (enumerated options with defaults), `## :outputs`, multiple `## :examples`, `## :algorithms` (math-heavy with LaTeX), `## :tips` with `> [!NOTE]` callout, `## :references`, `See also`. Redesigned API uses name-value pairs via `arguments` block. |
 
 ## Block-Comment Variants
 
 | File | Line-comment counterpart | What it demonstrates |
 |------|--------------------------|---------------------|
-| `smoothts_v3_full_block.m` | `smoothts_v3_full.m` | Full grammar in block-comment form: `## Syntax`, `## Input/Output Arguments`, `## Examples`, `## Algorithms` (LaTeX), `## Tips`, `## References`, `See also` — all as bare Markdown text. |
+| `smoothts_v3_full_block.m` | `smoothts_v3_full.m` | Full grammar in block-comment form: `## :syntax`, `## Input/Output Arguments`, `## :examples`, `## :algorithms` (LaTeX), `## :tips`, `## :references`, `See also` — all as bare Markdown text. |
 
 ## Design notes
 

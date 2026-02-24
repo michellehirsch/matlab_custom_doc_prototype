@@ -8,7 +8,7 @@ exponential smoothing, and Gaussian-weighted smoothing.
 
 If `x` is a matrix, each column is smoothed independently.
 
-## Syntax
+## :syntax
 
 `y = smoothts(x)` smooths the time series `x` using a moving average
 with the default window size.
@@ -20,7 +20,7 @@ with the default window size.
 `y = smoothts(x, Method="gaussian", Window=w, Sigma=s)` uses
 Gaussian-weighted smoothing with explicit kernel width.
 
-## Input Arguments
+## :inputs
 
 `x` — Input time series.
 Input time series, specified as a numeric vector or matrix.
@@ -51,13 +51,13 @@ Standard deviation of the Gaussian kernel, in samples. Only used
 when `Method` is `"gaussian"`. Default is `Window/4`, which places
 approximately 95% of the kernel weight within the window.
 
-## Output Arguments
+## :outputs
 
 `y` — Smoothed time series.
 Smoothed time series, returned as a numeric array the same
 size as `x`.
 
-## Examples
+## :examples
 
 ### Smooth a noisy sine wave
 
@@ -89,7 +89,7 @@ smoothed = smoothts(data, Window=11);
 plot(smoothed)
 ```
 
-## Algorithms
+## :algorithms
 
 **Moving average.** The output at index $i$ is:
 
@@ -110,7 +110,7 @@ $$g_k = \frac{1}{Z} \exp\!\left(-\frac{k^2}{2\sigma^2}\right)$$
 
 where $Z$ is the normalizing constant ensuring $\sum g_k = 1$.
 
-## Tips
+## :tips
 
 - Increasing `Window` produces smoother output but introduces more lag
   and reduces sensitivity to rapid changes.
@@ -124,7 +124,7 @@ where $Z$ is the normalizing constant ensuring $\sum g_k = 1$.
 > boundaries. This avoids padding artifacts but means the first
 > and last few samples are smoothed with fewer points.
 
-## References
+## :references
 
 1. Hyndman, R.J. & Athanasopoulos, G. (2021). _Forecasting:
    Principles and Practice_, 3rd ed., OTexts.

@@ -7,7 +7,7 @@ function y = smoothts(x, opts)
 %
 % If `x` is a matrix, each column is smoothed independently.
 %
-% ## Syntax
+% ## :syntax
 %
 % `y = smoothts(x)` smooths the time series `x` using a moving average
 % with the default window size.
@@ -19,12 +19,12 @@ function y = smoothts(x, opts)
 % `y = smoothts(x, Method="gaussian", Window=w, Sigma=s)` uses
 % Gaussian-weighted smoothing with explicit kernel width.
 %
-% ## Output Arguments
+% ## :outputs
 %
 % `y` — Smoothed time series, returned as a numeric array the same
 % size as `x`.
 %
-% ## Examples
+% ## :examples
 %
 % ### Smooth a noisy sine wave
 %
@@ -56,7 +56,7 @@ function y = smoothts(x, opts)
 % plot(smoothed)
 % ```
 %
-% ## Algorithms
+% ## :algorithms
 %
 % **Moving average.** The output at index $i$ is:
 %
@@ -77,7 +77,7 @@ function y = smoothts(x, opts)
 %
 % where $Z$ is the normalizing constant ensuring $\sum g_k = 1$.
 %
-% ## Tips
+% ## :tips
 %
 % - Increasing `Window` produces smoother output but introduces more lag
 %   and reduces sensitivity to rapid changes.
@@ -91,7 +91,7 @@ function y = smoothts(x, opts)
 % > boundaries. This avoids padding artifacts but means the first
 % > and last few samples are smoothed with fewer points.
 %
-% ## References
+% ## :references
 %
 % 1. Hyndman, R.J. & Athanasopoulos, G. (2021). _Forecasting:
 %    Principles and Practice_, 3rd ed., OTexts.

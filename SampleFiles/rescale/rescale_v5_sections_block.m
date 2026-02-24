@@ -12,12 +12,12 @@ minimum value of `X` maps to 0 and the maximum maps to 1.
 the target range.  If omitted, `A` defaults to `0` and `B` defaults
 to `1`.
 
-## Output Arguments
+## :outputs
 
 `y` — Rescaled data, returned as an array the same size as `x`
 with values in the range $[a, b]$.
 
-## Examples
+## :examples
 
 ### Rescale to default range [0, 1]
 
@@ -43,7 +43,7 @@ for k = 1:size(M, 2)
 end
 ```
 
-## Tips
+## :tips
 
 - For data with outliers, consider clipping before rescaling:
   `x = max(min(x, upper), lower)` before calling `rescale`.
@@ -51,7 +51,7 @@ end
   columns or use `normalize(x, 'range')` from Statistics and
   Machine Learning Toolbox.
 
-## Algorithms
+## :algorithms
 
 The transformation applied is:
 

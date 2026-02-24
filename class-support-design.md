@@ -35,9 +35,9 @@ The help comment after `classdef` works exactly like a function help comment: fi
 
 ### 2. Creation Section ← Constructor Help
 
-The constructor is a method whose help comment has calling-form paragraphs, description, and `## Input Arguments` — exactly like a function page. We automatically pull this into the class page's "Creation" section.
+The constructor is a method whose help comment has calling-form paragraphs, description, and `## :inputs` — exactly like a function page. We automatically pull this into the class page's "Creation" section.
 
-**Why not a `## Creation` section in the class help?** It would duplicate the constructor's help and create a sync problem. The constructor IS the authoritative source for creation documentation.
+**Why not a `## :creation` directive in the class help?** It would duplicate the constructor's help and create a sync problem. The constructor IS the authoritative source for creation documentation.
 
 **Classes with no explicit constructor:** Auto-generate a minimal creation syntax: `obj = ClassName` or `obj = ClassName(Name=Value)` if the class has public settable properties. No description section. If the class has neither a constructor nor settable properties, omit the Creation section entirely.
 
@@ -61,11 +61,11 @@ The three-layer documentation model carries over directly:
 |---|---|---|
 | **Inline short** | Trailing `%` on property line | Always (summary tables, tooltips) |
 | **Preceding block** | Multi-line `%` before property line, inside `properties` block | Moderate detail (1–5 lines) |
-| **`## Properties` section** | In class help comment | Extensive (multi-paragraph, math, images) |
+| **`## :properties` directive** | In class help comment | Extensive (multi-paragraph, math, images) |
 
-Override rule: **"Section wins entirely"** — same as arguments. If a `## Properties` section exists in the class help, inline/preceding comments are ignored for ALL properties.
+Override rule: **"Section wins entirely"** — same as arguments. If a `## :properties` directive exists in the class help, inline/preceding comments are ignored for ALL properties.
 
-**Recommendation: Use inline comments as the default.** Only graduate to `## Properties` if you genuinely need multi-paragraph descriptions for properties. Most classes won't.
+**Recommendation: Use inline comments as the default.** Only graduate to `## :properties` if you genuinely need multi-paragraph descriptions for properties. Most classes won't.
 
 **Rationale for keeping "section wins entirely":** Consistency with the argument model. Two different override models would be confusing. The inline approach is compact enough that even classes with 30+ properties stay manageable.
 
@@ -96,7 +96,7 @@ Rules:
 
 **Tradeoff:** This requires splitting a single `properties` block into multiple blocks to get groups. This is a minor code structure change, but arguably better code organization, and entirely optional. Users who don't want groups don't split.
 
-**Alternative considered:** `### Group Name` subheadings inside a `## Properties` section. Rejected because it requires the verbose `## Properties` approach and disconnects group structure from code.
+**Alternative considered:** `### Group Name` subheadings inside a `## :properties` section. Rejected because it requires the verbose `## :properties` approach and disconnects group structure from code.
 
 ### 5. Property Visibility from Block Attributes
 
@@ -137,7 +137,7 @@ function obj = read(obj, value)
 %
 % `s = read(s, value)` stores `value` as the current reading.
 %
-% ## Input Arguments
+% ## :inputs
 %
 % `s` — Input `Sensor` object.
 %
@@ -233,10 +233,10 @@ Concern: will classdef files get gigantic with comments?
 
 **Estimate for a moderate class** (8 methods, 10 properties, like DataLogger):
 
-| Component | Lines (inline property docs) | Lines (## Properties section) |
+| Component | Lines (inline property docs) | Lines (## :properties section) |
 |---|---|---|
 | Class help (description, examples, tips, see also) | ~40 | ~40 |
-| `## Properties` section in class help | 0 | ~50 |
+| `## :properties` section in class help | 0 | ~50 |
 | Properties blocks (with inline comments) | ~15 | ~12 |
 | Constructor help | ~25 | ~25 |
 | Other method helps (7 × ~15) | ~105 | ~105 |
@@ -245,10 +245,10 @@ Concern: will classdef files get gigantic with comments?
 
 **For a large class** (20 methods, 30 properties):
 
-| Component | Lines (inline) | Lines (## Properties) |
+| Component | Lines (inline) | Lines (## :properties) |
 |---|---|---|
 | Class help | ~50 | ~50 |
-| `## Properties` section | 0 | ~150 |
+| `## :properties` section | 0 | ~150 |
 | Properties blocks | ~45 | ~35 |
 | Constructor help | ~30 | ~30 |
 | Method helps (19 × ~15) | ~285 | ~285 |
@@ -272,7 +272,7 @@ MATLAB class files of 800–1000 lines are normal for well-factored classes. The
 - Help comment grammar (Markdown, `##` sections, `See also`)
 - Argument documentation (three-layer model) — applies to constructor and methods
 - Syntax block generation (three-priority model) — applies to constructor and methods
-- Section headings (`## Examples`, `## Tips`, `## Algorithms`, etc.)
+- Section directives (`## :examples`, `## :tips`, `## :algorithms`, etc.)
 - Rendering: Markdown, code blocks, callouts, math, cross-references
 
 ## What's New for Classes

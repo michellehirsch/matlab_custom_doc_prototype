@@ -9,7 +9,7 @@ classdef DataLogger < handle
 % `DataLogger` is a handle class, so all methods modify the object
 % in place without needing to reassign the output.
 %
-% ## Properties
+% ## :properties
 %
 % `Name` — Display name for the logger. Used as a label in log file
 % headers and diagnostic messages. Default is `"Untitled"`.
@@ -34,7 +34,7 @@ classdef DataLogger < handle
 % `NumSamples` — Total number of samples logged since the last
 % `start`, including samples already flushed to disk. Read-only.
 %
-% ## Examples
+% ## :examples
 %
 % ### Basic in-memory logging
 %
@@ -70,7 +70,7 @@ classdef DataLogger < handle
 % dl.stop();
 % ```
 %
-% ## Tips
+% ## :tips
 %
 % - Set `BufferSize` based on available memory and desired flush
 %   frequency. Smaller buffers flush more often, reducing data loss
@@ -86,7 +86,7 @@ classdef DataLogger < handle
 % > growing beyond `BufferSize`. Set a log file for long-running
 % > acquisitions.
 %
-% ## Version History
+% ## :version-history
 %
 % **Introduced in v1.0**
 %
@@ -94,7 +94,7 @@ classdef DataLogger < handle
 %
 % **v1.2** — Added `BufferFull` event and auto-flush behavior.
 %
-% ## More About
+% ## :more-about
 %
 % - [Logging Best Practices](logging-best-practices.html)
 % - [Working with Timetables](matlab:doc('timetable'))
@@ -138,7 +138,7 @@ classdef DataLogger < handle
         % `dl = DataLogger(name, LogFile=f, SampleRate=r, BufferSize=n)`
         % sets optional configuration properties at construction.
         %
-        % ## Input Arguments
+        % ## :inputs
         %
         % `name` — Display name for the logger.
         %
@@ -205,7 +205,7 @@ classdef DataLogger < handle
         % flushed. Fires `DataLogged` after each sample and
         % `BufferFull` when the buffer reaches capacity.
         %
-        % ## Input Arguments
+        % ## :inputs
         %
         % `value` — Scalar numeric value to record.
             arguments
@@ -235,7 +235,7 @@ classdef DataLogger < handle
         % `tt = getData(dl)` returns the currently buffered data as a
         % timetable with columns `Time` and `Value`.
         %
-        % ## Output Arguments
+        % ## :outputs
         %
         % `tt` — Buffered data, returned as a `timetable`. The
         % `Time` variable contains `datetime` timestamps and `Value`
@@ -257,11 +257,11 @@ classdef DataLogger < handle
         % to the specified CSV file. Unlike the automatic flush
         % mechanism, `export` does not clear the buffer afterward.
         %
-        % ## Input Arguments
+        % ## :inputs
         %
         % `filename` — Output file path. Specify as a string.
         %
-        % ## Examples
+        % ## :examples
         %
         % ```matlab
         % dl = DataLogger("Experiment");

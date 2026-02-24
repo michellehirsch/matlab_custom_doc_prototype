@@ -5,7 +5,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % along a specified dimension.  Supports arithmetic, harmonic, and
 % geometric means.
 %
-% ## Syntax
+% ## :syntax
 %
 % `m = weightedmean(x)` computes the arithmetic mean of the elements of
 % `x`, using uniform weights.
@@ -26,7 +26,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % `[m, ci] = weightedmean(___)` also returns a confidence interval `ci`
 % based on the weighted standard deviation.
 %
-% ## Examples
+% ## :examples
 %
 % ### Basic weighted mean
 %
@@ -43,7 +43,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % avg = weightedmean(speeds, Method="harmonic")   % 48 km/h
 % ```
 %
-% ## Tips
+% ## :tips
 %
 % - Use `Method="harmonic"` when averaging rates or ratios (e.g., speeds
 %   or prices per unit).
