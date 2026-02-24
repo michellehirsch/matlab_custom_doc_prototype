@@ -5,7 +5,7 @@ classdef Sensor
 % most recent reading. Use the `read` method to update the stored
 % value and the `calibrate` method to apply a zero-offset correction.
 %
-% ## Examples
+% ## :examples
 %
 % ```matlab
 % s = Sensor("Thermocouple-01", "temperature", Units="C");

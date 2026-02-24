@@ -22,5 +22,5 @@ This example demonstrates six levels of documentation for the same function. The
 | `v1_args` | Inline argument comments | Trailing `%` on each arguments line |
 | `v2_help` | Traditional help block | H1 line, description, prose argument descriptions, indented example, See also |
 | `v3_markup` | Markdown formatting | Backtick code, **bold**, fenced code block — same content, richer rendering |
-| `v4_sections` | Custom sections | `## Examples` (two subsections) and `## Tips` |
-| `v5_override` | Section override | `## Syntax` overrides the auto-generated syntax block |
+| `v4_sections` | Custom sections | `## :examples` (two subsections) and `## :tips` |
+| `v5_override` | Section override | `## :syntax` overrides the auto-generated syntax block |

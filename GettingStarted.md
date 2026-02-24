@@ -154,15 +154,15 @@ The trailing `%` becomes the short description (shown in the collapsed view), an
 
 ### Step 6: Add structured sections
 
-Use `##` headings in the help block to create recognized page sections. Each section type gets specialized rendering:
+Use `## :keyword` directives in the help block to create recognized page sections. Each directive type gets specialized rendering:
 
 ```matlab
-% ## Output Arguments
+% ## :outputs
 %
 % `y` — Rescaled data, returned as an array the same size as `x`
 % with values in the range $[a, b]$.
 %
-% ## Examples
+% ## :examples
 %
 % ### Rescale to default range [0, 1]
 %
@@ -178,19 +178,19 @@ Use `##` headings in the help block to create recognized page sections. Each sec
 % y = rescale(x, -1, 1)
 % ```
 %
-% ## Tips
+% ## :tips
 %
 % - For data with outliers, consider clipping before rescaling:
 %   `x = max(min(x, upper), lower)` before calling `rescale`.
 %
-% ## Algorithms
+% ## :algorithms
 %
 % The transformation applied is:
 %
 % $$y = a + \frac{x - \min(x)}{\max(x) - \min(x)} \cdot (b - a)$$
 ```
 
-`## Examples` with `###` subsections become separately titled examples. `## Algorithms` renders LaTeX math. `## Tips` renders as a styled bulleted list. The recognized section headings are: `Syntax`, `Input Arguments`, `Output Arguments`, `Examples`, `Tips`, `Algorithms`, `References`, `Version History`, and `More About`. Arbitrary section headings are also permitted; they just don't get special treatment. Manually specifying Syntax, Input Arguments, or Output Arguments in help comments overrides the automatically generated content.  
+`## :examples` with `###` subsections become separately titled examples. `## :algorithms` renders LaTeX math. `## :tips` renders as a styled bulleted list. The recognized directives are: `:syntax`, `:inputs`, `:outputs`, `:examples`, `:tips`, `:algorithms`, `:references`, `:version-history`, and `:more-about`. Arbitrary `## Headings` (without the `:` prefix) are also permitted — they render with the author's exact heading text and get no special treatment. Using `:syntax`, `:inputs`, or `:outputs` overrides the automatically generated content.
 
 ![rescale v5 — structured sections](images/rescale_v5.png)
 
@@ -200,17 +200,17 @@ Use `##` headings in the help block to create recognized page sections. Each sec
 
 ### Step 7: Override auto-generation
 
-By default, the Syntax block and Input Arguments section are auto-generated from the `arguments` block. If you need full control, add `## Syntax` or `## Input Arguments` sections in the help block to override them:
+By default, the Syntax block and Input Arguments section are auto-generated from the `arguments` block. If you need full control, add `## :syntax` or `## :inputs` directives in the help block to override them:
 
 ```matlab
-% ## Syntax
+% ## :syntax
 %
 % `Y = rescale(X)` rescales the elements of `X` to the default range
 % [0, 1].
 %
 % `Y = rescale(X, A, B)` rescales to the range [`A`, `B`].
 %
-% ## Input Arguments
+% ## :inputs
 %
 % `x` — Input data array.
 % Input data, specified as a vector, matrix, or N-D array. All
@@ -223,7 +223,7 @@ By default, the Syntax block and Input Arguments section are auto-generated from
 % (maximum of `x` maps to `a`).
 ```
 
-When present, `## Syntax` replaces the auto-generated syntax block entirely, and `## Input Arguments` replaces the argument descriptions from the `arguments` block. This gives you full control over the exact calling forms and descriptions shown on the page. Manually specifying arguments uses the following syntax:
+When present, `## :syntax` replaces the auto-generated syntax block entirely, and `## :inputs` replaces the argument descriptions from the `arguments` block. This gives you full control over the exact calling forms and descriptions shown on the page. Manually specifying arguments uses the following syntax:
 ```matlab
 % `argname` — Short description.
 % Long description is contained in contiguous comment lines following the 
@@ -310,7 +310,7 @@ classdef Sensor_v3_help
 % most recent reading. Use the `read` method to update the stored
 % value and the `calibrate` method to apply a zero-offset correction.
 %
-% ## Examples
+% ## :examples
 %
 % ```matlab
 % s = Sensor("Thermocouple-01", "temperature", Units="C");
@@ -334,7 +334,7 @@ Method help follows the same conventions as standalone functions — synopsis, s
         % measurement units.
 ```
 
-All the formatting from the function walkthrough applies: Markdown inline code, fenced code blocks, `## Examples` sections, `See also` links, and so on.
+All the formatting from the function walkthrough applies: Markdown inline code, fenced code blocks, `## :examples` directives, `See also` links, and so on.
 
 > [Full source](SampleFiles/Sensor/Sensor_v3_help.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v3_help.html)
 
@@ -394,7 +394,7 @@ The property table renders with group headings, making it easy to scan large cla
 
 ### Step 6: Override with structured sections
 
-Just as functions support `## Syntax` and `## Input Arguments` overrides, classes support a `## Properties` section in the class help block. This replaces the auto-generated property descriptions with manually authored content using the same keyed format as `## Input Arguments`:
+Just as functions support `## :syntax` and `## :inputs` overrides, classes support a `## :properties` directive in the class help block. This replaces the auto-generated property descriptions with manually authored content using the same keyed format as `## :inputs`:
 
 ```matlab
 classdef Sensor_v5_sections
@@ -402,7 +402,7 @@ classdef Sensor_v5_sections
 %
 % ...
 %
-% ## Properties
+% ## :properties
 %
 % `Name` — Sensor display name
 % Display name of the sensor, such as `"Thermocouple-01"`.
@@ -417,7 +417,7 @@ classdef Sensor_v5_sections
 % reflects the raw reading adjusted by the calibration `Offset`.
 ```
 
-When present, `## Properties` replaces the property descriptions from the `properties` block, giving you full control over the property documentation. Individual methods also support `## Syntax`, `## Input Arguments`, and `## Output Arguments` overrides, just like standalone functions.
+When present, `## :properties` replaces the property descriptions from the `properties` block, giving you full control over the property documentation. Individual methods also support `## :syntax`, `## :inputs`, and `## :outputs` overrides, just like standalone functions.
 
 > [Full source](SampleFiles/Sensor/Sensor_v5_sections.m) · [Rendered HTML](https://michellehirsch.github.io/matlab_custom_doc_prototype/Sensor/Sensor_v5_sections.html)
 

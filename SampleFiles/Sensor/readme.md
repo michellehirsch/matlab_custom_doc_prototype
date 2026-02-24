@@ -13,8 +13,8 @@ Each step adds one concept, mirroring the [rescale](../rescale/) function progre
 | `Sensor_v2_plain.m` | Traditional `%` help block on `classdef` and each method | Standard help — inline descriptions merge into auto-generated tables |
 | `Sensor_v3_help.m` | Same help with Markdown: backticks, fenced code blocks | Opt-in to Markdown for richer rendering |
 | `Sensor_v4_propdoc.m` | Preceding `%` blocks before properties and method arguments | Long descriptions (recommended approach) |
-| `Sensor_v5_sections.m` | `## Properties`, `## Input Arguments`, `## Examples` with subsections | Structured sections for professional layout |
-| `Sensor_v6_override.m` | `## Syntax` on constructor, property groups | Overriding auto-generation for full control |
+| `Sensor_v5_sections.m` | `## :properties`, `## :inputs`, `## :examples` with subsections | Structured sections for professional layout |
+| `Sensor_v6_override.m` | `## :syntax` on constructor, property groups | Overriding auto-generation for full control |
 
 ### What the progression shows
 
@@ -23,7 +23,7 @@ Each step adds one concept, mirroring the [rescale](../rescale/) function progre
 - **v2 → v3**: Adding Markdown formatting (backticks, fenced code blocks) gets richer rendering for free.
 - **v3 → v4**: Adding preceding `%` blocks in `properties` and `arguments` blocks gives detailed descriptions — the recommended way to document properties and arguments.
 - **v4 → v5**: Adding `##` section headings creates structured page sections: property docs, argument docs, examples with subsections.
-- **v5 → v6**: Adding `## Syntax` and property groups overrides auto-generation when you need full control.
+- **v5 → v6**: Adding `## :syntax` and property groups overrides auto-generation when you need full control.
 
 ## Block-Comment Variants
 

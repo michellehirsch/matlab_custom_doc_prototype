@@ -39,8 +39,8 @@ info.Synopsis = parseSynopsis(helpLines, info.Name);
 [info.Description, info.Sections, info.SeeAlso] = parseHelpBody(helpLines);
 
 %% Extract long-form argument descriptions from sections
-inputArgLong = extractArgDescriptions(info.Sections, "Input Arguments");
-outputArgLong = extractArgDescriptions(info.Sections, "Output Arguments");
+inputArgLong = extractArgDescriptions(info.Sections, ":inputs");
+outputArgLong = extractArgDescriptions(info.Sections, ":outputs");
 
 %% Parse arguments block (if present)
 [parsedArgs, parsedNVArgs] = parseArgumentsBlock(lines, helpEndIdx);
@@ -55,7 +55,7 @@ info.OutputArgs = buildOutputArgs(info.OutputArgNames, outputArgLong);
 %% Classdef-specific parsing
 if info.Type == "classdef"
     % Parse properties, methods, events blocks
-    hasPropsSection = any(arrayfun(@(s) s.Heading == "Properties", info.Sections));
+    hasPropsSection = any(arrayfun(@(s) s.Heading == ":properties", info.Sections));
     info.Properties = parsePropertiesBlocks(lines, hasPropsSection, info.Sections);
     [info.Methods, constructorRange] = parseMethodsBlocks(lines, info.Name);
     info.Events = parseEventsBlocks(lines);
@@ -89,10 +89,10 @@ if info.Type == "classdef"
     info.OutputArgs = struct("Name", {}, "LongDesc", {});
 else
     %% Build syntax entries (three-priority model) — functions only
-    % Priority 1: ## Syntax section is the sole source
+    % Priority 1: ## :syntax directive is the sole source
     syntaxContent = "";
     for k = 1:numel(info.Sections)
-        if info.Sections(k).Heading == "Syntax"
+        if info.Sections(k).Heading == ":syntax"
             syntaxContent = string(info.Sections(k).Content);
             break
         end
@@ -616,7 +616,7 @@ end
 
 function args = mergeArgDescriptions(parsedArgs, longDescMap)
 % Merge long-form descriptions into parsed argument structs
-% Priority: ## Input/Output Arguments section > preceding comments > empty
+% Priority: ## :inputs / ## :outputs directive > preceding comments > empty
 args = parsedArgs;
 for k = 1:numel(args)
     lookupName = char(args(k).Name);
@@ -688,7 +688,7 @@ end
 end
 
 function entries = parseSyntaxSection(content, funcName)
-% Parse a ## Syntax section for calling forms and descriptions.
+% Parse a ## :syntax section for calling forms and descriptions.
 % Handles fenced code blocks (forms only) and calling-form paragraphs
 % (forms with descriptions). funcName is used only for validation of
 % calling-form paragraphs; fenced code block lines are accepted as-is.
@@ -843,7 +843,7 @@ props = struct("Name", {}, "Size", {}, "Class", {}, "Default", {}, ...
     "ShortDesc", {}, "LongDesc", {}, "Group", {}, "ReadOnly", {}, ...
     "Dependent", {}, "Constant", {}, "Abstract", {});
 
-% If ## Properties section exists, use it (correctly separates short/long)
+% If ## :properties directive exists, use it (correctly separates short/long)
 if hasPropsSection
     props = parsePropertiesFromSection(sections);
 end
@@ -853,7 +853,7 @@ blockProps = parsePropertiesBlocksRaw(lines);
 
 if ~isempty(blockProps)
     if isempty(props)
-        % No ## Properties section — use block-parsed properties directly
+        % No ## :properties directive — use block-parsed properties directly
         props = blockProps;
     else
         % Merge block metadata (Size, Class, Default, flags) into section-defined props.
@@ -986,14 +986,14 @@ end
 end
 
 function props = parsePropertiesFromSection(sections)
-% Build property list from ## Properties section content.
+% Build property list from ## :properties section content.
 % Each property is listed as `name` — short description, followed by
 % optional continuation lines that form the long description.
 props = struct("Name", {}, "Size", {}, "Class", {}, "Default", {}, ...
     "ShortDesc", {}, "LongDesc", {}, "Group", {}, "ReadOnly", {}, ...
     "Dependent", {}, "Constant", {}, "Abstract", {});
 for s = 1:numel(sections)
-    if sections(s).Heading == "Properties"
+    if sections(s).Heading == ":properties"
         contentLines = splitlines(string(sections(s).Content));
         currentName = "";
         currentShort = "";
@@ -1241,7 +1241,7 @@ ctorInfo.Synopsis = parseSynopsis(helpLines, className);
 [ctorInfo.Description, ctorInfo.Sections, ~] = parseHelpBody(helpLines);
 
 % Extract argument descriptions from help sections
-inputArgLong = extractArgDescriptions(ctorInfo.Sections, "Input Arguments");
+inputArgLong = extractArgDescriptions(ctorInfo.Sections, ":inputs");
 
 % Parse arguments block within constructor
 [parsedArgs, parsedNVArgs] = parseArgumentsBlock(ctorLines, helpEndIdx);
@@ -1251,7 +1251,7 @@ ctorInfo.NameValueArgs = mergeArgDescriptions(parsedNVArgs, inputArgLong);
 % Build syntax entries
 syntaxContent = "";
 for s = 1:numel(ctorInfo.Sections)
-    if ctorInfo.Sections(s).Heading == "Syntax"
+    if ctorInfo.Sections(s).Heading == ":syntax"
         syntaxContent = string(ctorInfo.Sections(s).Content);
         break
     end
@@ -1299,8 +1299,8 @@ mInfo.Synopsis = parseSynopsis(helpLines, methodName);
 [mInfo.Description, mInfo.Sections, mInfo.SeeAlso] = parseHelpBody(helpLines);
 
 % Extract argument descriptions from help sections
-inputArgLong = extractArgDescriptions(mInfo.Sections, "Input Arguments");
-outputArgLong = extractArgDescriptions(mInfo.Sections, "Output Arguments");
+inputArgLong = extractArgDescriptions(mInfo.Sections, ":inputs");
+outputArgLong = extractArgDescriptions(mInfo.Sections, ":outputs");
 
 % Parse arguments block
 [parsedArgs, parsedNVArgs] = parseArgumentsBlock(mLines, helpEndIdx);
@@ -1311,7 +1311,7 @@ mInfo.OutputArgs = buildOutputArgs(outArgNames, outputArgLong);
 % Build syntax entries (same three-priority model as functions)
 syntaxContent = "";
 for s = 1:numel(mInfo.Sections)
-    if mInfo.Sections(s).Heading == "Syntax"
+    if mInfo.Sections(s).Heading == ":syntax"
         syntaxContent = string(mInfo.Sections(s).Content);
         break
     end

@@ -13,7 +13,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % `[M, CI] = weightedmean(...)` also returns a confidence interval `CI`
 % based on the weighted standard deviation.
 %
-% ## Input Arguments
+% ## :inputs
 %
 % `x` — Input data.
 % Input data, specified as a vector, matrix, or N-D array.
@@ -44,7 +44,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % Confidence level for the interval returned in the second output
 % `CI`.  Must be between 0 and 1.
 %
-% ## Output Arguments
+% ## :outputs
 %
 % `m` — Weighted mean.
 % Weighted mean, returned as a scalar, vector, or array depending
@@ -55,7 +55,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % returned as an array with two slices along dimension `dim`
 % (lower bound and upper bound).
 %
-% ## Examples
+% ## :examples
 %
 % ### Basic weighted mean
 %
@@ -72,7 +72,7 @@ function [m, ci] = weightedmean(x, w, dim, opts)
 % avg = weightedmean(speeds, Method="harmonic")   % 48 km/h
 % ```
 %
-% ## Tips
+% ## :tips
 %
 % - Use `Method="harmonic"` when averaging rates or ratios (e.g., speeds
 %   or prices per unit).

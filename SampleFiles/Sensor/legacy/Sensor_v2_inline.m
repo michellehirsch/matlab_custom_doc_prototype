@@ -5,7 +5,7 @@ classdef Sensor
 % recent reading.  Use the read method to update the stored value and
 % the calibrate method to apply a zero-offset correction.
 %
-% ## Examples
+% ## :examples
 %   s = Sensor("Thermocouple", "temperature");
 %   s = s.read(23.5);
 %   disp(s.Value)

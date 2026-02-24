@@ -5,7 +5,7 @@ classdef Sensor
 % most recent reading. Use the `read` method to update the stored
 % value and the `calibrate` method to apply a zero-offset correction.
 %
-% ## Properties
+% ## :properties
 %
 % `Name` — Sensor display name
 % Display name of the sensor, such as `"Thermocouple-01"`.
@@ -33,7 +33,7 @@ classdef Sensor
 % Calibration offset applied to raw readings. Set by the
 % `calibrate` method.
 %
-% ## Examples
+% ## :examples
 %
 % ### Create a sensor and take a reading
 %
@@ -74,7 +74,7 @@ classdef Sensor
         % `s = Sensor(name, type, Units=u)` also specifies the
         % measurement units.
         %
-        % ## Input Arguments
+        % ## :inputs
         %
         % `name` — Sensor name
         % Display name for the sensor. Specify as a string or
@@ -104,7 +104,7 @@ classdef Sensor
         % and records the timestamp. The stored value is adjusted by
         % the calibration `Offset`.
         %
-        % ## Input Arguments
+        % ## :inputs
         %
         % `value` — Raw sensor reading
         % Raw sensor reading. Specify as a scalar double. The
@@ -124,7 +124,7 @@ classdef Sensor
         % correction so that future readings align with the known
         % reference value.
         %
-        % ## Input Arguments
+        % ## :inputs
         %
         % `knownValue` — Known reference value
         % Reference value from a calibration standard. Specify

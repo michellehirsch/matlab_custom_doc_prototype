@@ -5,7 +5,7 @@ function p = addgradient(ax, opts)
 % polished visual effect. The gradient is drawn as an interpolated
 % patch behind all other plot objects.
 %
-% ## Input Arguments
+% ## :inputs
 %
 % `ax` — Target axes. If omitted, uses the current axes (`gca`).
 %
@@ -21,13 +21,13 @@ function p = addgradient(ax, opts)
 % `[0, 1]` where `0` is fully transparent and `1` is fully opaque.
 % Default is `1`.
 %
-% ## Output Arguments
+% ## :outputs
 %
 % `p` — Handle to the patch object used to draw the gradient,
 % returned as a `matlab.graphics.primitive.Patch`. Use this to further
 % customize the gradient appearance after creation.
 %
-% ## Examples
+% ## :examples
 %
 % ### Basic gray gradient
 %
@@ -50,7 +50,7 @@ function p = addgradient(ax, opts)
 %     FaceAlpha=0.3);
 % ```
 %
-% ## Tips
+% ## :tips
 %
 % - Add the gradient **after** setting final axis limits, since the
 %   gradient patch is not automatically redrawn when limits change.

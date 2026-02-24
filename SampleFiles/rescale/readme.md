@@ -13,8 +13,8 @@ This is the progression used in [GettingStarted.md](../../GettingStarted.md). Ea
 | `rescale_v2_plain.m` | Traditional `%` help block (synopsis, prose, plain-text example, `See also`) | Standard help block — argument descriptions from inline `%` merge in |
 | `rescale_v3_help.m` | Same help with Markdown: backticks, fenced code block, `**bold**` | Opt-in to Markdown for richer rendering |
 | `rescale_v4_argdoc.m` | Preceding `%` blocks before arguments in `arguments` block | Long argument descriptions (recommended approach) |
-| `rescale_v5_sections.m` | `## Output Arguments`, `## Examples`, `## Tips`, `## Algorithms` (LaTeX math) | Structured sections |
-| `rescale_v6_override.m` | `## Syntax` and `## Input Arguments` sections in help block | Overriding auto-generation for full control |
+| `rescale_v5_sections.m` | `## :outputs`, `## :examples`, `## :tips`, `## :algorithms` (LaTeX math) | Structured sections |
+| `rescale_v6_override.m` | `## :syntax` and `## :inputs` sections in help block | Overriding auto-generation for full control |
 
 ### What the progression shows
 
@@ -23,7 +23,7 @@ This is the progression used in [GettingStarted.md](../../GettingStarted.md). Ea
 - **v2 → v3**: Adding Markdown formatting (backticks, fenced code blocks) gets richer rendering for free.
 - **v3 → v4**: Adding preceding `%` blocks in the `arguments` block gives detailed argument descriptions — the recommended way to document arguments.
 - **v4 → v5**: Adding `##` section headings creates structured page sections: examples, tips, algorithms with LaTeX math.
-- **v5 → v6**: Adding `## Syntax` or `## Input Arguments` sections overrides auto-generation when you need full control.
+- **v5 → v6**: Adding `## :syntax` or `## :inputs` sections overrides auto-generation when you need full control.
 
 ## Block-Comment Variants
 
@@ -43,4 +43,4 @@ These files predate the recommended progression and explore different combinatio
 |------|---------------------|
 | `rescale_v1_plain.m` | Classic MATLAB help style with `arguments` block but no inline descriptions |
 | `rescale_v2_args.m` | Same help as v1_plain + inline `%` + Markdown markup |
-| `rescale_v3_full.m` | Full `## Input/Output Arguments` sections, `## Examples`, `## Tips`, `## Algorithms`, LaTeX math |
+| `rescale_v3_full.m` | Full `## Input/Output Arguments` sections, `## :examples`, `## :tips`, `## :algorithms`, LaTeX math |
